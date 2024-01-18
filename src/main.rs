@@ -1,7 +1,9 @@
 use poise::serenity_prelude as serenity;
 use dotenv::dotenv;
-use chrono::{Utc, Duration};
+use chrono::Utc;
+use cron::Schedule;
 use rand::{Rng, thread_rng};
+use std::str::FromStr;
 
 //mod pokemon;
 mod birthday;
@@ -14,14 +16,14 @@ pub struct Data { // User data, which is stored and accessible in all command in
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
-async fn listener(ctx: &serenity::Context, event: &poise::Event<'_>, data: &Data) -> Result<(), Error> {
+async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framework: poise::FrameworkContext<'_, Data, Error>, data: &Data) -> Result<(), Error> {
     match event {
-        poise::Event::Ready { .. } => {
+        serenity::FullEvent::Ready { .. } => {
             println!("AmethystBot online!");
             birthday_check(ctx, data).await;
         },
-        poise::Event::GuildCreate { guild, .. } => {
-            let guild_id = *guild.id.as_u64() as i64;
+        serenity::FullEvent::GuildCreate { guild, .. } => {
+            let guild_id = guild.id.get();
             let count = sqlx::query!("SELECT COUNT(guild_id) AS count FROM guild_settings WHERE guild_id = ?", guild_id)
                 .fetch_one(&data.database)
                 .await
@@ -33,7 +35,7 @@ async fn listener(ctx: &serenity::Context, event: &poise::Event<'_>, data: &Data
                     .await
                     .unwrap();
 
-                println!("[GUILD] Joined new guild: {} (ID: {})", guild.name, guild.id.as_u64());
+                println!("[GUILD] Joined new guild: {} (ID: {})", guild.name, guild.id.get());
             }
         },
         _ => {}
@@ -44,54 +46,82 @@ async fn listener(ctx: &serenity::Context, event: &poise::Event<'_>, data: &Data
 
 async fn birthday_check(ctx: &serenity::Context, data: &Data) {
     loop {
+        // Check the time (10 UTC, 2 Pacific)
         let current_time = Utc::now();
 
         if current_time.format("%H:%M").to_string() == String::from("10:00") {
-            let registered_guild_channels = sqlx::query!("SELECT guild_id, birthday_channel FROM guild_settings")
+            let registered_guild_channels = sqlx::query!("SELECT guild_id, birthday_channel, birthday_role FROM guild_settings")
                 .fetch_all(&data.database)
                 .await
                 .unwrap();
 
             let current_date = Utc::now().format("%m-%d").to_string();
             let current_date: Vec<u8> = current_date.split('-').map(|i| i.parse::<u8>().unwrap()).collect();
-            println!("{:?}", current_date);
 
+            // Loop the registered guilds
             for guild in registered_guild_channels {
+                // Check for birthday channel
                 if guild.birthday_channel.is_none() {
                     continue;
                 }
-                let channel_id = serenity::ChannelId(guild.birthday_channel.unwrap());
+                let channel_id = serenity::ChannelId::new(guild.birthday_channel.unwrap());
 
-                let guild_birthdays = sqlx::query!("SELECT * FROM birthday WHERE guild_id = ? AND birthday = ? AND birthmonth = ?", guild.guild_id, current_date[1], current_date[0])
+                // Select birthdays
+                let guild_birthdays = sqlx::query!("SELECT * FROM birthday WHERE guild_id = ?", guild.guild_id)
                     .fetch_all(&data.database)
                     .await
                     .unwrap();
 
                 for birthday in guild_birthdays {
-                    let username = birthday.nickname.unwrap_or(serenity::UserId(birthday.user_id).to_user(&ctx.http).await.unwrap().name);
-                    let bday_msg = format!("Happy birthday, {username}! :birthday: We hope you have a great day!");
+                    if birthday.birthmonth == current_date[0] && birthday.birthday == current_date[1] {
+                        // Take care of the birthday message
+                        let username = birthday.nickname.unwrap_or(serenity::UserId::new(birthday.user_id).to_user(&ctx.http).await.unwrap().name);
+                        let bday_msg = format!("Happy birthday, {username}! :birthday: We hope you have a great day!");
 
-                    let random_gif = {
-                        let mut rng = thread_rng();
-                        rng.gen_range(0..data.birthday_gifs.len())
-                    };
+                        let random_gif = {
+                            let mut rng = thread_rng();
+                            rng.gen_range(0..data.birthday_gifs.len())
+                        };
 
-                    channel_id.send_message(&ctx, |m| {
-                        m.content("@everyone :birthday:");
-                        m.embed(|e| {
-                            e.colour(0xFF0095);
-                            e.thumbnail("https://media.istockphoto.com/vectors/birthday-cake-vector-isolated-vector-id901911608?k=6&m=901911608&s=612x612&w=0&h=d6v27h_mYUaUe0iSrtoX5fTw-2wGVIY4UTbQPeI-T5k=");
-                            e.title(bday_msg);
-                            e.image(&data.birthday_gifs[random_gif])
-                        })
-                    }).await.unwrap();
+                        let embed = serenity::CreateEmbed::new()
+                            .colour(0xFF0095)
+                            .thumbnail("https://media.istockphoto.com/vectors/birthday-cake-vector-isolated-vector-id901911608?k=6&m=901911608&s=612x612&w=0&h=d6v27h_mYUaUe0iSrtoX5fTw-2wGVIY4UTbQPeI-T5k=")
+                            .title(bday_msg)
+                            .image(&data.birthday_gifs[random_gif]);
+
+                        let msg = serenity::CreateMessage::new()
+                            .content("@everyone :birthday:")
+                            .embed(embed);
+
+                        channel_id.send_message(&ctx, msg).await.unwrap();
+
+                        // Give birthday role
+                        if guild.birthday_role.is_some() {
+                            let birthday_guild = serenity::GuildId::new(guild.guild_id);
+                            let birthday_member = birthday_guild.member(&ctx.http, serenity::UserId::new(birthday.user_id)).await.unwrap();
+
+                            birthday_member.add_role(&ctx.http, serenity::RoleId::new(guild.birthday_role.unwrap())).await.unwrap();
+                        }
+                    } else {
+                        // Remove birthday role if member has it
+                        if guild.birthday_role.is_some() {
+                            let birthday_guild = serenity::GuildId::new(guild.guild_id);
+                            let birthday_member = birthday_guild.member(&ctx.http, serenity::UserId::new(birthday.user_id)).await.unwrap();
+
+                            birthday_member.remove_role(&ctx.http, serenity::RoleId::new(guild.birthday_role.unwrap())).await.unwrap();
+                        }
+                    }
                 }
             }
         }
 
-        let next_time = (current_time + Duration::days(1)).date_naive().and_hms_opt(10,0,0).unwrap();
-        let duration = next_time.signed_duration_since(current_time.naive_utc());
-        println!("[ BIRTHDAY CHECK ] Duration until next check: {duration} - {next_time}");
+        // Calculate sleep until the next proper birthday time
+        let expression = "0 0 10 * * * *";
+        let schedule = Schedule::from_str(expression).unwrap();
+        let schedule: Vec<_> = schedule.upcoming(Utc).take(1).collect();
+        let duration = schedule[0].signed_duration_since(current_time);
+        
+        println!("[ BIRTHDAY CHECK ] Duration until next check: {duration}");
 
         tokio::time::sleep(duration.to_std().unwrap()).await;
     }
@@ -113,18 +143,11 @@ async fn main() {
         "https://media.giphy.com/media/arGdCUFTYzs2c/giphy.gif".to_string(),
     ];
 
+    let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
+    let intents = serenity::GatewayIntents::non_privileged();
+
     let framework = poise::Framework::builder()
-        .options(poise::FrameworkOptions {
-            commands: vec![
-                //pokemon::poke_commands::starter()
-                birthday::bday(),
-            ],
-            event_handler: |ctx, event, _, data| Box::pin(listener(ctx, event, data)),
-            ..Default::default()
-        })
-        .token(std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN"))
-        .intents(serenity::GatewayIntents::non_privileged())
-        .setup(|ctx, _ready, framework| {
+        .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {
@@ -132,7 +155,19 @@ async fn main() {
                     birthday_gifs,
                 })
             })
-        });
+        })
+        .options(poise::FrameworkOptions {
+            commands: vec![
+                //pokemon::poke_commands::starter()
+                birthday::bday(),
+            ],
+            event_handler: |ctx, event, framework, data| Box::pin(listener(ctx, event, framework, data)),
+            ..Default::default()
+        })
+        .build();
 
-    framework.run().await.unwrap();
+    let client = serenity::ClientBuilder::new(token, intents)
+        .framework(framework)
+        .await;
+    client.unwrap().start().await.unwrap();
 }

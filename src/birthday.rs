@@ -18,7 +18,7 @@ const MONTHS: [&str; 12] = ["January", "February", "March", "April", "May", "Jun
 // Function library
 //--------------------
 async fn bday_channel_check(ctx: Context<'_>) -> Result<bool, Error> {
-    let guild_id = *ctx.guild_id().unwrap().as_u64();
+    let guild_id = ctx.guild_id().unwrap().get();
 
     let settings = sqlx::query!("SELECT birthday_channel FROM guild_settings WHERE guild_id = ?", guild_id)
         .fetch_one(&ctx.data().database)
@@ -28,7 +28,7 @@ async fn bday_channel_check(ctx: Context<'_>) -> Result<bool, Error> {
     match settings.birthday_channel {
         Some(_) => Ok(true),
         None => {
-            ctx.send(|m| m
+            ctx.send(poise::CreateReply::default()
                 .content("You must select a channel to post birthday announcements in before using this command!")
                 .ephemeral(true)
             ).await?;
@@ -43,7 +43,7 @@ async fn bday_channel_check(ctx: Context<'_>) -> Result<bool, Error> {
 #[poise::command(
     slash_command,
     guild_only,
-    subcommands("add", "remove", "edit", "setchannel", "info")
+    subcommands("add", "remove", "edit", "setchannel", "info", "setrole")
 )]
 pub async fn bday(_: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -68,8 +68,8 @@ pub async fn add(
     #[max_length = 30] nickname: Option<String>,
 ) -> Result<(), Error> {
     let birthday = Birthday {
-        guild_id: *ctx.guild_id().unwrap().as_u64(),
-        user_id: *user.id.as_u64(),
+        guild_id: ctx.guild_id().unwrap().get(),
+        user_id: user.id.get(),
         birthday: day,
         birthmonth: month,
         nickname,
@@ -89,10 +89,7 @@ pub async fn add(
         .await
         .unwrap();
 
-    ctx.send(|m| {
-        m.content(format!("Successfully added {}'s birthday!", user.name));
-        m.ephemeral(false)
-    }).await?;
+    ctx.say(format!("Successfully added {}'s birthday!", user.name)).await?;
 
     Ok(())
 }
@@ -112,10 +109,10 @@ pub async fn remove(
     if user.is_none() && user_id.is_none() {
         return Err("You must choose a user or manually enter the user ID!".into());
     }
-    let guild_id = *ctx.guild_id().unwrap().as_u64();
+    let guild_id = ctx.guild_id().unwrap().get();
 
     let user_id = match &user {
-        Some(u) => *u.id.as_u64(),
+        Some(u) => u.id.get(),
         None => {
             match user_id.unwrap().parse::<u64>() {
                 Ok(i) => i,
@@ -172,8 +169,8 @@ pub async fn edit (
     #[description = "A nickname for the user."]
     #[max_length = 30] nickname: Option<String>,
 ) -> Result<(), Error> {
-    let guild_id = *ctx.guild_id().unwrap().as_u64();
-    let user_id = *user.id.as_u64();
+    let guild_id = ctx.guild_id().unwrap().get();
+    let user_id = user.id.get();
 
     // Validate information
     let birthday_info = sqlx::query_as!(Birthday, "SELECT * FROM birthday WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
@@ -213,8 +210,8 @@ pub async fn info(
     ctx: Context<'_>,
     #[description = "User to check."] user: serenity::User
 ) -> Result<(), Error> {
-    let guild_id = *ctx.guild_id().unwrap().as_u64();
-    let user_id = *user.id.as_u64();
+    let guild_id = ctx.guild_id().unwrap().get();
+    let user_id = user.id.get();
     let count = sqlx::query!("SELECT COUNT(user_id) AS count FROM birthday WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
         .fetch_one(&ctx.data().database)
         .await
@@ -261,8 +258,8 @@ pub async fn setchannel(
     ctx: Context<'_>,
     #[description = "Channel to post announcements in."] channel: serenity::Channel
 ) -> Result<(), Error> {
-    let channel_id = *channel.id().as_u64();
-    let guild_id = *ctx.guild_id().unwrap().as_u64();
+    let channel_id = channel.id().get();
+    let guild_id = ctx.guild_id().unwrap().get();
 
     sqlx::query!("UPDATE guild_settings SET birthday_channel = ? WHERE guild_id = ?", channel_id, guild_id)
         .execute(&ctx.data().database)
@@ -270,6 +267,40 @@ pub async fn setchannel(
         .unwrap();
 
     ctx.say(format!("Now posting birthday announcements in {}!", channel)).await?;
+
+    Ok(())
+}
+
+/// Set the role to give the birthday person
+#[poise::command(
+    slash_command,
+    required_permissions = "MANAGE_CHANNELS",
+    check = "bday_channel_check",
+    guild_only
+)]
+pub async fn setrole(
+    ctx: Context<'_>,
+    #[description = "Role to give the birthday person."] role: Option<serenity::Role>
+) -> Result<(), Error> {
+    let guild_id = ctx.guild_id().unwrap().get();
+
+    // Build/run query
+    let role_id: Option<u64> = match &role {
+        Some(r) => Some(r.id.get()),
+        None => None
+    };
+
+    sqlx::query!("UPDATE guild_settings SET birthday_role = ? WHERE guild_id = ?", role_id, guild_id)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
+    // Message author
+    if role.is_none() {
+        ctx.say(format!("{}, no longer giving a role on a user's birthday!", ctx.author())).await?;
+    } else {
+        ctx.say(format!("{}. now giving the {} role on birthdays!", ctx.author(), role.unwrap().name)).await?;
+    }
 
     Ok(())
 }
