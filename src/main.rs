@@ -7,10 +7,13 @@ use std::str::FromStr;
 
 //mod pokemon;
 mod birthday;
+mod misc;
 
 pub struct Data { // User data, which is stored and accessible in all command invocations
     database: sqlx::MySqlPool,
     birthday_gifs: Vec<String>,
+    slap_gifs: Vec<String>,
+    self_slap_gifs: Vec<String>
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -135,12 +138,22 @@ async fn main() {
     let database_url = std::env::var("DATABASE_URL").expect("missing DATABASE_URL");
     let database = sqlx::mysql::MySqlPool::connect(&database_url).await.unwrap();
 
+    // * CUSTOM DATA
     let birthday_gifs: Vec<String> = vec![
         "https://media.giphy.com/media/WRL7YgP42OKns22wRD/giphy.gif".to_string(),
         "https://media.giphy.com/media/g5R9dok94mrIvplmZd/giphy.gif".to_string(),
         "https://media.giphy.com/media/l4KhS0BOFBhU2SYIU/giphy.gif".to_string(),
         "https://media.giphy.com/media/l4KibWpBGWchSqCRy/giphy.gif".to_string(),
         "https://media.giphy.com/media/arGdCUFTYzs2c/giphy.gif".to_string(),
+    ];
+
+    let slap_gifs: Vec<String> = vec![
+        "https://media.tenor.com/7_ktpmstpIkAAAAC/troutslap.gif".to_string(),
+        "https://media.tenor.com/w5wm0GtfI9EAAAAd/tenor.gif".to_string(),
+    ];
+
+    let self_slap_gifs: Vec<String> = vec![
+        "https://i.makeagif.com/media/6-19-2015/rh-Yg3.gif".to_string(),
     ];
 
     let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
@@ -153,6 +166,8 @@ async fn main() {
                 Ok(Data {
                     database,
                     birthday_gifs,
+                    slap_gifs,
+                    self_slap_gifs
                 })
             })
         })
@@ -160,6 +175,7 @@ async fn main() {
             commands: vec![
                 //pokemon::poke_commands::starter()
                 birthday::bday(),
+                misc::slap(),
             ],
             event_handler: |ctx, event, framework, data| Box::pin(listener(ctx, event, framework, data)),
             ..Default::default()
