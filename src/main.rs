@@ -4,16 +4,20 @@ use chrono::Utc;
 use cron::Schedule;
 use rand::{Rng, thread_rng};
 use std::str::FromStr;
+use std::time::Duration;
 
 //mod pokemon;
 mod birthday;
 mod misc;
+mod welcome;
+mod mtg;
 
 pub struct Data { // User data, which is stored and accessible in all command invocations
     database: sqlx::MySqlPool,
     birthday_gifs: Vec<String>,
     slap_gifs: Vec<String>,
-    self_slap_gifs: Vec<String>
+    self_slap_gifs: Vec<String>,
+    client: reqwest::Client,
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -25,8 +29,10 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             println!("AmethystBot online!");
             birthday_check(ctx, data).await;
         },
+
         serenity::FullEvent::GuildCreate { guild, .. } => {
             let guild_id = guild.id.get();
+            // Check guild_settings
             let count = sqlx::query!("SELECT COUNT(guild_id) AS count FROM guild_settings WHERE guild_id = ?", guild_id)
                 .fetch_one(&data.database)
                 .await
@@ -38,7 +44,52 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                     .await
                     .unwrap();
 
-                println!("[GUILD] Joined new guild: {} (ID: {})", guild.name, guild.id.get());
+                println!("[GUILD] Added guild to table \"guild_settings\": {} (ID: {})", guild.name, guild.id.get());
+            }
+    
+            // Check welcome table
+            let count = sqlx::query!("SELECT COUNT(guild_id) AS count FROM welcome WHERE guild_id = ?", guild_id)
+                .fetch_one(&data.database)
+                .await
+                .unwrap();
+
+            if count.count == 0 {
+                sqlx::query!("INSERT INTO welcome (guild_id) VALUES (?)", guild_id)
+                    .execute(&data.database)
+                    .await
+                    .unwrap();
+
+                println!("[GUILD] Added guild to table \"welcome\": {} (ID: {})", guild.name, guild.id.get());
+            }
+        },
+
+        serenity::FullEvent::GuildMemberAddition { new_member } => {
+            let guild_id = new_member.guild_id.get();
+
+            // Grab all info and check for channel
+            let welcome = sqlx::query!("SELECT * FROM welcome WHERE guild_id = ?", guild_id)
+                .fetch_one(&data.database)
+                .await
+                .unwrap();
+
+            if welcome.channel_id.is_none() { return Ok(()); }
+
+            // Build welcome embed then post
+            let welcome_embed = serenity::CreateEmbed::new()
+                .colour(0xC0C0C0)
+                .thumbnail(new_member.face())
+                .image(welcome.image_url.unwrap_or(String::new()))
+                .description(welcome.message.unwrap_or(String::new()))
+                .title(format!("Welcome, {}!", new_member.display_name()));
+
+            let channel = serenity::ChannelId::new(welcome.channel_id.unwrap());
+
+            channel.send_message(&ctx, serenity::CreateMessage::new().embed(welcome_embed)).await.unwrap();
+        },
+
+        serenity::FullEvent::Message { new_message } => {
+            if new_message.author.id.get() == 375805687529209857u64 && new_message.content.contains("Desiner") {
+                new_message.channel_id.say(&ctx, "Desiner").await?;
             }
         },
         _ => {}
@@ -157,7 +208,13 @@ async fn main() {
     ];
 
     let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
-    let intents = serenity::GatewayIntents::non_privileged();
+    let intents = serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::GUILD_MEMBERS | serenity::GatewayIntents::GUILD_MESSAGES | serenity::GatewayIntents::MESSAGE_CONTENT;
+
+    // Bulid Client
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()
+        .unwrap();
 
     let framework = poise::Framework::builder()
         .setup(move |ctx, _ready, framework| {
@@ -167,15 +224,19 @@ async fn main() {
                     database,
                     birthday_gifs,
                     slap_gifs,
-                    self_slap_gifs
+                    self_slap_gifs,
+                    client
                 })
             })
         })
         .options(poise::FrameworkOptions {
             commands: vec![
-                //pokemon::poke_commands::starter()
+                //pokemon::poke_commands::starter(),
                 birthday::bday(),
                 misc::slap(),
+                misc::cookie(),
+                welcome::welcome(),
+                mtg::mtg(),
             ],
             event_handler: |ctx, event, framework, data| Box::pin(listener(ctx, event, framework, data)),
             ..Default::default()

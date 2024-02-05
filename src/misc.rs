@@ -34,3 +34,32 @@ pub async fn slap(
 
     Ok(())
 }
+
+/// Cookiiiieeeesssssss
+#[poise::command(
+    slash_command,
+    member_cooldown = 5
+)]
+pub async fn cookie(
+    ctx: Context<'_>,
+    victim: serenity::User
+) -> Result<(), Error> {
+    let embed_image = if ctx.author() == &victim {
+        "https://media.tenor.com/TJREb7mszbwAAAAd/cat-cookies-cookies.gif"
+    } else {
+        "https://media.tenor.com/Neg3VGfuntMAAAAC/spongebob-cookies.gif"
+    };
+
+    let embed_msg = if ctx.author() == &victim {
+        format!("{}, NO! NO COOKIES FOR YOU!", ctx.author())
+    } else {
+        format!("{}, {} has given you a cookie!", victim, ctx.author())
+    };
+
+    let embed = serenity::CreateEmbed::new()
+        .image(embed_image);
+
+    ctx.send(poise::CreateReply::default().content(embed_msg).embed(embed)).await?;
+
+    Ok(())
+}

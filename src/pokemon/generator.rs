@@ -10,32 +10,27 @@ pub enum IvEvOptions {
 
 // -- Primary generator function
 pub async fn generate_pokemon(
-    database: &sqlx::SqlitePool,
-    pokemon: String,
+    client: &reqwest::Client,
+    pokemon: i64,
     level: i64,
     iv_ev_options: IvEvOptions
 ) -> Pokemon {
     // Grab base data and initialize things
     let mut new_pokemon: Pokemon = Pokemon::new();
 
-    let base_data = sqlx::query!("SELECT * FROM pokemon WHERE name = ?", pokemon)
-        .fetch_one(database)
+    let base_data = client.get(format!("http://localhost:3000/pokemon/{pokemon}"))
+        .send()
+        .await
+        .unwrap()
+        .json::<serde_json::Value>()
         .await
         .unwrap();
 
-    new_pokemon.name = base_data.name;
-    new_pokemon.id = base_data.id;
+    new_pokemon.name = base_data["pokemonName"].as_str().unwrap().to_string();
+    new_pokemon.national_pokedex_num = base_data["nationalPokedexNum"].as_i64().unwrap();
     new_pokemon.level = level;
-    new_pokemon.poke_type = (base_data.type_1.unwrap().into(), base_data.type_2.unwrap().into());
-    new_pokemon.current_hp = base_data.base_hp.unwrap();
-    new_pokemon.base_stats = PokemonStats {
-        hp: base_data.base_hp.unwrap(),
-        attack: base_data.base_attack.unwrap(),
-        defense: base_data.base_defense.unwrap(),
-        special_attack: base_data.base_special_attack.unwrap(),
-        special_defense: base_data.base_special_defense.unwrap(),
-        speed: base_data.base_speed.unwrap(),
-    };
+    new_pokemon.pokemon_type = base_data["pokemonType"].as_array().unwrap().iter().map(|t| t.as_str().unwrap().to_string().into()).collect();
+    new_pokemon.base_stats = serde_json::from_value(base_data["baseStats"].clone()).unwrap();
 
     // Set IVs and EVs
     match iv_ev_options {
@@ -58,6 +53,7 @@ pub async fn generate_pokemon(
         rng.gen_range(0..=24).into()
     };
     new_pokemon.stats.hp = generate_stat(new_pokemon.base_stats.hp as f64, new_pokemon.ivs.hp as f64, new_pokemon.evs.hp as f64, level as f64, None);
+    new_pokemon.current_hp = new_pokemon.stats.hp;
     new_pokemon.stats.attack = generate_stat(new_pokemon.base_stats.attack as f64, new_pokemon.ivs.attack as f64, new_pokemon.evs.attack as f64, level as f64, Some(new_pokemon.nature.get_multiplier("attack")));
     new_pokemon.stats.defense = generate_stat(new_pokemon.base_stats.defense as f64, new_pokemon.ivs.defense as f64, new_pokemon.evs.defense as f64, level as f64, Some(new_pokemon.nature.get_multiplier("defense")));
     new_pokemon.stats.special_attack = generate_stat(new_pokemon.base_stats.special_attack as f64, new_pokemon.ivs.special_attack as f64, new_pokemon.evs.special_attack as f64, level as f64, Some(new_pokemon.nature.get_multiplier("special_attack")));

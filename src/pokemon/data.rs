@@ -1,28 +1,15 @@
-// -- Starter Pokemon
-#[derive(Debug, poise::ChoiceParameter)]
-pub enum StarterPokemon {
-    Bulbasaur,
-    Charmander,
-    Squirtle,
-}
+use serde::{Serialize, Deserialize};
 
-impl StarterPokemon {
-    fn to_string(&self) -> String {
-        match self {
-            StarterPokemon::Bulbasaur => String::from("Bulbasaur"),
-            StarterPokemon::Charmander => String::from("Charmander"),
-            StarterPokemon::Squirtle => String::from("Squirtle"),
-        }
-    }
-}
-
-// -- Pokemon Data
-#[derive(Debug)]
+/*******************
+* Pokemon Structure
+********************/
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Pokemon {
     pub name: String,
-    pub id: i64,
+    pub national_pokedex_num: i64,
     pub level: i64,
-    pub poke_type: (PokemonType, PokemonType),
+    pub pokemon_type: Vec<PokemonType>,
     pub status: PokemonStatus,
     pub nature: PokemonNature,
     pub current_hp: i64,
@@ -37,9 +24,9 @@ impl Pokemon {
     pub fn new() -> Self {
         return Pokemon {
             name: "Missingno.".to_string(),
-            id: 0,
+            national_pokedex_num: 0,
             level: 0,
-            poke_type: (PokemonType::from(0), PokemonType::from(0)),
+            pokemon_type: Vec::new(),
             status: PokemonStatus::Normal,
             nature: PokemonNature::Hardy,
             current_hp: 0,
@@ -52,7 +39,27 @@ impl Pokemon {
     }
 }
 
-#[derive(Debug)]
+/*******************
+* Move Structure
+********************/
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Move {
+    pub name: String,
+    pub id: u32,
+    pub move_type: i32,
+    pub effect_type: u32,
+    pub points: (u32, u32),
+    pub power: u32,
+    pub accuracy: u32,
+    pub effect: u32,
+}
+
+/*******************
+* Stats Structure
+********************/
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PokemonStats {
     pub hp: i64,
     pub attack: i64,
@@ -75,21 +82,95 @@ impl PokemonStats {
     }
 }
 
-// -- Move Data
-#[derive(Debug)]
-pub struct Move {
-    pub name: String,
-    pub id: u32,
-    pub move_type: i32,
-    pub effect_type: u32,
-    pub points: (u32, u32),
-    pub power: u32,
-    pub accuracy: u32,
-    pub effect: u32,
+/*******************
+* Status Enum
+********************/
+#[derive(Debug, Serialize, Deserialize)]
+pub enum PokemonStatus {
+    Normal = 0,
+    Burn,
+    Freeze,
+    Frostbite,
+    Paralysis,
+    Poison,
+    BadPoison,
+    Sleep,
+    Drowsy,
 }
 
-// -- Nature Data
-#[derive(Debug)]
+impl From<i64> for PokemonStatus {
+    fn from(status_int: i64) -> Self {
+        match status_int {
+            0 => PokemonStatus::Normal,
+            1 => PokemonStatus::Burn,
+            2 => PokemonStatus::Freeze,
+            3 => PokemonStatus::Frostbite,
+            4 => PokemonStatus::Paralysis,
+            5 => PokemonStatus::Poison,
+            6 => PokemonStatus::BadPoison,
+            7 => PokemonStatus::Sleep,
+            8 => PokemonStatus::Drowsy,
+            _ => PokemonStatus::Normal
+        }
+    }
+}
+
+/*******************
+* Type Enum
+********************/
+#[derive(Debug, Serialize, Deserialize)]
+pub enum PokemonType {
+    None = -1,
+    Normal,
+    Fighting,
+    Flying,
+    Poison,
+    Ground,
+    Rock,
+    Bug,
+    Ghost,
+    Steel,
+    Fire,
+    Water,
+    Grass,
+    Electric,
+    Psychic,
+    Ice,
+    Dragon,
+    Dark,
+    Fairy
+}
+
+impl From<String> for PokemonType {
+    fn from(poketype: String) -> Self {
+        match poketype.as_str() {
+            "Normal" => PokemonType::Normal,
+            "Fighting" => PokemonType::Fighting,
+            "Flying" => PokemonType::Flying,
+            "Poison" => PokemonType::Poison,
+            "Ground" => PokemonType::Ground,
+            "Rock" => PokemonType::Rock,
+            "Bug" => PokemonType::Bug,
+            "Ghost" => PokemonType::Ghost,
+            "Steel" => PokemonType::Steel,
+            "Fire" => PokemonType::Fire,
+            "Water" => PokemonType::Water,
+            "Grass" => PokemonType::Grass,
+            "Electric" => PokemonType::Electric,
+            "Psychic" => PokemonType::Psychic,
+            "Ice" => PokemonType::Ice,
+            "Dragon" => PokemonType::Dragon,
+            "Dark" => PokemonType::Dark,
+            "Fairy" => PokemonType::Fairy,
+            _ => PokemonType::None
+        }
+    }
+}
+
+/*******************
+* Nature Enum
+********************/
+#[derive(Debug, Serialize, Deserialize)]
 pub enum PokemonNature {
     Hardy = 0,
     Lonely,
@@ -191,88 +272,6 @@ impl PokemonNature {
                 }
             }
             _ => 0.0
-        }
-    }
-}
-
-// -- Type Data
-#[derive(Debug)]
-pub enum PokemonType {
-    None = -1,
-    Normal,
-    Fighting,
-    Flying,
-    Poison,
-    Ground,
-    Rock,
-    Bug,
-    Ghost,
-    Steel,
-    Fire,
-    Water,
-    Grass,
-    Electric,
-    Psychic,
-    Ice,
-    Dragon,
-    Dark,
-    Fairy
-}
-
-impl From<i64> for PokemonType {
-    fn from(poketype: i64) -> Self {
-        match poketype {
-            -1 => PokemonType::None,
-            0 => PokemonType::Normal,
-            1 => PokemonType::Fighting,
-            2 => PokemonType::Flying,
-            3 => PokemonType::Poison,
-            4 => PokemonType::Ground,
-            5 => PokemonType::Rock,
-            6 => PokemonType::Bug,
-            7 => PokemonType::Ghost,
-            8 => PokemonType::Steel,
-            9 => PokemonType::Fire,
-            10 => PokemonType::Water,
-            11 => PokemonType::Grass,
-            12 => PokemonType::Electric,
-            13 => PokemonType::Psychic,
-            14 => PokemonType::Ice,
-            15 => PokemonType::Dragon,
-            16 => PokemonType::Dark,
-            17 => PokemonType::Fairy,
-            _ => PokemonType::None
-        }
-    }
-}
-
-// -- Status Data
-#[derive(Debug)]
-pub enum PokemonStatus {
-    Normal = 0,
-    Burn,
-    Freeze,
-    Frostbite,
-    Paralysis,
-    Poison,
-    BadPoison,
-    Sleep,
-    Drowsy,
-}
-
-impl From<i64> for PokemonStatus {
-    fn from(status_int: i64) -> Self {
-        match status_int {
-            0 => PokemonStatus::Normal,
-            1 => PokemonStatus::Burn,
-            2 => PokemonStatus::Freeze,
-            3 => PokemonStatus::Frostbite,
-            4 => PokemonStatus::Paralysis,
-            5 => PokemonStatus::Poison,
-            6 => PokemonStatus::BadPoison,
-            7 => PokemonStatus::Sleep,
-            8 => PokemonStatus::Drowsy,
-            _ => PokemonStatus::Normal
         }
     }
 }
