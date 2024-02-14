@@ -2,11 +2,12 @@ use crate::{Context, Error};
 use poise::serenity_prelude as serenity;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
+use std::collections::HashMap;
 
 //--------------------
 // Data
 //--------------------
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct ScryfallMTGCard {
     // Core fields
     scryfall_uri: String,
@@ -23,6 +24,7 @@ struct ScryfallMTGCard {
     type_line: String,
     reserved: bool,
     card_faces: Option<Vec<ScryfallMTGCardFace>>,
+    legalities: HashMap<String, String>,
 
     // Print Fields
     artist: Option<String>,
@@ -34,7 +36,7 @@ struct ScryfallMTGCard {
     image_uris: Option<Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct ScryfallMTGCardFace {
     name: String,
     mana_cost: String,
@@ -238,10 +240,98 @@ pub async fn card(
         return Err(format!("{}{}", scryfall["details"].as_str().unwrap(), set_error).into());
     }
 
-    // Create Embed
+    // Create Embeds
+    //- Primary embeds
     let scryfall: ScryfallMTGCard = serde_json::from_value(scryfall).unwrap();
 
-    if scryfall.card_faces.is_some() { // * Double faced cards
+    let mut card_embed: Vec<serenity::CreateEmbed> = if scryfall.card_faces.is_some() {
+        create_double_face_embed(scryfall.clone())
+    } else {
+        vec![create_single_face_embed(scryfall.clone())]
+    };
+
+    //- Card legalities
+    let mut desc = String::new();
+    for (format, legal) in scryfall.legalities.iter() {
+        desc = format!("{desc}{format}: {legal}\n");
+    }
+
+    let legalities_embed = serenity::CreateEmbed::new()
+        .title(scryfall.name)
+        .url(scryfall.scryfall_uri)
+        .description(desc);
+
+    // Create button row
+    let mut face_index = 0;
+    let ctx_id = ctx.id();
+    let flip_id = format!("{ctx_id}flip");
+    let legalities_id = format!("{ctx_id}legalities");
+    let mut legalities_text = "Legalities";
+    let mut showing_legalities = false;
+
+    let mut buttons: Vec<serenity::CreateButton> = vec![serenity::CreateButton::new(&legalities_id).label(legalities_text)];
+
+    if scryfall.card_faces.is_some() {
+        buttons.push(serenity::CreateButton::new(&flip_id).label("Flip"));
+    }
+
+    let buttons = serenity::CreateActionRow::Buttons(buttons);
+
+    // Send embed and handle button events
+    ctx.send(poise::CreateReply::default()
+        .embed(card_embed[face_index].clone())
+        .components(vec![buttons])).await?;
+
+    while let Some(press) = serenity::collector::ComponentInteractionCollector::new(ctx)
+        .filter(move |press| press.data.custom_id.starts_with(&ctx_id.to_string()))
+        .timeout(std::time::Duration::from_secs(3600))
+        .await
+    {
+        // Button events
+        if press.data.custom_id == legalities_id {
+            showing_legalities = !showing_legalities;
+
+            if showing_legalities {
+                legalities_text = "Back";
+            } else {
+                legalities_text= "Legalities";
+            }
+        } else if press.data.custom_id == flip_id {
+            face_index = if face_index == 0 { 1 } else { 0 };
+
+            if showing_legalities {
+                showing_legalities = false;
+                legalities_text = "Legalities";
+            }
+        } else {
+            continue;
+        }
+
+        // Update embed
+        if showing_legalities {
+            press
+                .create_response(
+                    ctx.serenity_context(),
+                    serenity::CreateInteractionResponse::UpdateMessage(
+                        serenity::CreateInteractionResponseMessage::new()
+                            .embed(legalities_embed.clone())
+                    )
+                )
+                .await?;
+        } else {
+            press
+                .create_response(
+                    ctx.serenity_context(),
+                    serenity::CreateInteractionResponse::UpdateMessage(
+                        serenity::CreateInteractionResponseMessage::new()
+                            .embed(card_embed[face_index].clone())
+                    )
+                )
+                .await?;
+        }
+    }
+
+    /*if scryfall.card_faces.is_some() { // * Double faced cards
         let card_faces = create_double_face_embed(scryfall);
 
         // Create buttoned embed
@@ -281,7 +371,7 @@ pub async fn card(
     } else { // * Single faced cards
         let card_embed = create_single_face_embed(scryfall);
         ctx.send(poise::CreateReply::default().embed(card_embed)).await?;
-    }
+    }*/
 
     
     Ok(())
