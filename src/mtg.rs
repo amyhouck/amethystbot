@@ -262,24 +262,24 @@ pub async fn card(
     };
 
     //- Card legalities
-    let mut format_field = String::new();
-    let mut legal_field = String::new();
-    for (format, legal) in scryfall.legalities.iter() {
-        format_field = format!("{format_field}{}\n", beautify_format(format.to_string()));
-        legal_field = format!("{legal_field}{}\n", legal.replace("not_legal", ":x:").replace("legal", ":white_check_mark:").replace("banned", ":prohibited:").replace("restricted", ":grey_exclamation:"));
+    let mut format_list = String::new();
+    for (i, format) in scryfall.legalities.iter().enumerate() {
+        format_list = format!("{format_list}**{}:** {}\n",
+            beautify_format(format.0.to_string()),
+            format.1.replace("not_legal", ":x:").replace("legal", ":white_check_mark:").replace("banned", ":prohibited:").replace("restricted", ":grey_exclamation:")
+        );
+
+        if (i + 1) % 11 == 0 {
+            format_list = format!("{format_list}\n");
+        }
     }
+
+    let legal_desc = format!("**Key:**\n:white_check_mark: - *Legal*\n:x: - *Not Legal*\n:prohibited: - *Banned*\n:grey_exclamation: - *Restricted*\n\n{format_list}");
 
     let legalities_embed = serenity::CreateEmbed::new()
         .title(scryfall.name)
         .url(scryfall.scryfall_uri)
-        .field("Format:", format_field, true)
-        .field("Legality:", legal_field, true)
-        .description("**Key:**
-            :white_check_mark: - *Legal*
-            :x: - *Not Legal*
-            :prohibited: - *Banned*
-            :grey_exclamation: - *Restricted*
-        ");
+        .description(legal_desc);
 
     // Create button row
     let mut face_index = 0;
