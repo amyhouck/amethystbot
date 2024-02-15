@@ -195,6 +195,17 @@ fn create_single_face_embed(scryfall: ScryfallMTGCard) -> serenity::CreateEmbed 
     card_embed
 }
 
+fn beautify_format(mut format: String) -> String {
+    format = format.replace("paupercommander", "Pauper Commander");
+    format = format.replace("standardbrawl", "Standard Brawl");
+
+    let mut f_chars = format.chars();
+    match f_chars.next() {
+        Some(c) => c.to_uppercase().chain(f_chars).collect(),
+        None => String::new()
+    }
+}
+
 //--------------------
 // Commands
 //--------------------
@@ -244,22 +255,31 @@ pub async fn card(
     //- Primary embeds
     let scryfall: ScryfallMTGCard = serde_json::from_value(scryfall).unwrap();
 
-    let mut card_embed: Vec<serenity::CreateEmbed> = if scryfall.card_faces.is_some() {
+    let card_embed: Vec<serenity::CreateEmbed> = if scryfall.card_faces.is_some() {
         create_double_face_embed(scryfall.clone())
     } else {
         vec![create_single_face_embed(scryfall.clone())]
     };
 
     //- Card legalities
-    let mut desc = String::new();
+    let mut format_field = String::new();
+    let mut legal_field = String::new();
     for (format, legal) in scryfall.legalities.iter() {
-        desc = format!("{desc}{format}: {legal}\n");
+        format_field = format!("{format_field}{}\n", beautify_format(format.to_string()));
+        legal_field = format!("{legal_field}{}\n", legal.replace("not_legal", ":x:").replace("legal", ":white_check_mark:").replace("banned", ":prohibited:").replace("restricted", ":grey_exclamation:"));
     }
 
     let legalities_embed = serenity::CreateEmbed::new()
         .title(scryfall.name)
         .url(scryfall.scryfall_uri)
-        .description(desc);
+        .field("Format:", format_field, true)
+        .field("Legality:", legal_field, true)
+        .description("**Key:**
+            :white_check_mark: - *Legal*
+            :x: - *Not Legal*
+            :prohibited: - *Banned*
+            :grey_exclamation: - *Restricted*
+        ");
 
     // Create button row
     let mut face_index = 0;
@@ -307,6 +327,14 @@ pub async fn card(
             continue;
         }
 
+        let mut buttons: Vec<serenity::CreateButton> = vec![serenity::CreateButton::new(&legalities_id).label(legalities_text)];
+
+        if scryfall.card_faces.is_some() {
+            buttons.push(serenity::CreateButton::new(&flip_id).label("Flip"));
+        }
+
+        let buttons = serenity::CreateActionRow::Buttons(buttons);
+
         // Update embed
         if showing_legalities {
             press
@@ -315,6 +343,7 @@ pub async fn card(
                     serenity::CreateInteractionResponse::UpdateMessage(
                         serenity::CreateInteractionResponseMessage::new()
                             .embed(legalities_embed.clone())
+                            .components(vec![buttons])
                     )
                 )
                 .await?;
@@ -325,54 +354,12 @@ pub async fn card(
                     serenity::CreateInteractionResponse::UpdateMessage(
                         serenity::CreateInteractionResponseMessage::new()
                             .embed(card_embed[face_index].clone())
+                            .components(vec![buttons])
                     )
                 )
                 .await?;
         }
     }
-
-    /*if scryfall.card_faces.is_some() { // * Double faced cards
-        let card_faces = create_double_face_embed(scryfall);
-
-        // Create buttoned embed
-        let mut face_index = 0;
-        let ctx_id = ctx.id();
-        let flip_id = format!("{ctx_id}flip");
-
-        let button = serenity::CreateActionRow::Buttons(vec![
-            serenity::CreateButton::new(&flip_id).label("Flip"),
-        ]);
-        
-        ctx.send(poise::CreateReply::default()
-            .embed(card_faces[face_index].clone())
-            .components(vec![button])).await?;
-
-        while let Some(press) = serenity::collector::ComponentInteractionCollector::new(ctx)
-            .filter(move |press| press.data.custom_id.starts_with(&ctx_id.to_string()))
-            .timeout(std::time::Duration::from_secs(3600))
-            .await
-        {
-            if press.data.custom_id == flip_id {
-                face_index = if face_index == 0 { 1 } else { 0 };
-            } else {
-                continue;
-            }
-
-            press
-            .create_response(
-                ctx.serenity_context(),
-                serenity::CreateInteractionResponse::UpdateMessage(
-                    serenity::CreateInteractionResponseMessage::new()
-                        .embed(card_faces[face_index].clone())
-                )
-            )
-            .await?;
-        }
-    } else { // * Single faced cards
-        let card_embed = create_single_face_embed(scryfall);
-        ctx.send(poise::CreateReply::default().embed(card_embed)).await?;
-    }*/
-
     
     Ok(())
 }
