@@ -222,11 +222,31 @@ pub async fn mtg(_: Context<'_>) -> Result<(), Error> {
 #[poise::command(slash_command)]
 pub async fn card(
     ctx: Context<'_>,
-    name: String,
+    name: Option<String>,
     #[max_length = 3] set: Option<String>,
+    #[max_length = 4] collector_num: Option<i64>,
 ) -> Result<(), Error> {
-    // Run a fuzzy search for the card
-    let scryfall = ctx.data().client.get(format!("https://api.scryfall.com/cards/named?fuzzy={}&set={}", name, set.as_ref().unwrap_or(&String::new())))
+    // Validate paramters
+    if name.is_none() && set.is_none() && collector_num.is_none() {
+        return Err("You must include at least the name parameter!".into());
+    }
+
+    if set.is_some() && name.is_none() && collector_num.is_none() {
+        return Err("You must include the name of the card or the collector number!".into());
+    }
+
+    if collector_num.is_some() && set.is_none() {
+        return Err("You must include the set code when specifying a collector number!".into());
+    }
+
+    // Determine API URL and perform query
+    let api_url = if collector_num.is_some() {
+        format!("https://api.scryfall.com/cards/{}/{}", set.as_ref().unwrap(), collector_num.unwrap())
+    } else {
+        format!("https://api.scryfall.com/cards/named?fuzzy={}&set={}", name.unwrap(), set.as_ref().unwrap_or(&String::new()))
+    };
+
+    let scryfall = ctx.data().client.get(api_url)
         .send()
         .await;
 
