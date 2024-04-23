@@ -239,11 +239,13 @@ pub async fn card(
         return Err("You must include the set code when specifying a collector number!".into());
     }
 
+    let set = set.unwrap().to_lowercase();
+
     // Determine API URL and perform query
     let api_url = if collector_num.is_some() {
-        format!("https://api.scryfall.com/cards/{}/{}", set.as_ref().unwrap(), collector_num.unwrap())
+        format!("https://api.scryfall.com/cards/{}/{}", set, collector_num.unwrap())
     } else {
-        format!("https://api.scryfall.com/cards/named?fuzzy={}&set={}", name.unwrap(), set.as_ref().unwrap_or(&String::new()))
+        format!("https://api.scryfall.com/cards/named?fuzzy={}&set={}", name.unwrap(), set)
     };
 
     let scryfall = ctx.data().client.get(api_url)
@@ -262,13 +264,7 @@ pub async fn card(
     if scryfall["object"].as_str().unwrap() == "error" {
         println!("[ Scryfall - ERROR ] Encountered error for Scryfall data ({}) - {}", scryfall["status"].as_i64().unwrap(), scryfall["code"].as_str().unwrap());
 
-        let set_error = if set.is_some() {
-            format!(" in the set \"{}\"", set.unwrap())
-        } else {
-            String::new()
-        };
-
-        return Err(format!("{}{}", scryfall["details"].as_str().unwrap(), set_error).into());
+        return Err(format!("{}", scryfall["details"].as_str().unwrap()).into());
     }
 
     // Create Embeds

@@ -11,6 +11,7 @@ mod birthday;
 mod misc;
 mod welcome;
 mod mtg;
+mod digimon;
 
 pub struct Data { // User data, which is stored and accessible in all command invocations
     database: sqlx::MySqlPool,
@@ -232,11 +233,17 @@ async fn main() {
         .options(poise::FrameworkOptions {
             commands: vec![
                 //pokemon::poke_commands::starter(),
+
                 birthday::bday(),
+
                 misc::slap(),
                 misc::cookie(),
+
                 welcome::welcome(),
+
                 mtg::mtg(),
+
+                digimon::digimon(),
             ],
             event_handler: |ctx, event, framework, data| Box::pin(listener(ctx, event, framework, data)),
             ..Default::default()
