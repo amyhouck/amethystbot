@@ -239,7 +239,7 @@ pub async fn card(
         return Err("You must include the set code when specifying a collector number!".into());
     }
 
-    let set = set.unwrap().to_lowercase();
+    let set = set.unwrap_or(String::new()).to_lowercase();
 
     // Determine API URL and perform query
     let api_url = if collector_num.is_some() {
