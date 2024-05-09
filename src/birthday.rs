@@ -318,7 +318,6 @@ pub async fn list(
     #[max = 12_u8] month: Option<u8>
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
-    let guild_id = 545745915151908865u64;
 
     // Fetch any birthdays if any
     let month_query = if month.is_some() {
