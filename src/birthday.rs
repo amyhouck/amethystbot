@@ -4,6 +4,7 @@ use poise::serenity_prelude as serenity;
 //--------------------
 // Data
 //--------------------
+#[derive(sqlx::FromRow, Debug)]
 pub struct Birthday {
     guild_id: u64,
     user_id: u64,
@@ -43,7 +44,7 @@ async fn bday_channel_check(ctx: Context<'_>) -> Result<bool, Error> {
 #[poise::command(
     slash_command,
     guild_only,
-    subcommands("add", "remove", "edit", "setchannel", "info", "setrole")
+    subcommands("add", "remove", "edit", "setchannel", "info", "setrole", "list")
 )]
 pub async fn bday(_: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -275,8 +276,7 @@ pub async fn setchannel(
 #[poise::command(
     slash_command,
     required_permissions = "MANAGE_CHANNELS",
-    check = "bday_channel_check",
-    guild_only
+    check = "bday_channel_check"
 )]
 pub async fn setrole(
     ctx: Context<'_>,
@@ -301,6 +301,66 @@ pub async fn setrole(
     } else {
         ctx.say(format!("{}. now giving the {} role on birthdays!", ctx.author(), role.unwrap().name)).await?;
     }
+
+    Ok(())
+}
+
+/// List all birthdays on the server
+#[poise::command(
+    slash_command,
+    required_permissions = "MANAGE_CHANNELS",
+    check = "bday_channel_check",
+)]
+pub async fn list(
+    ctx: Context<'_>,
+
+    #[min = 1_u8]
+    #[max = 12_u8] month: Option<u8>
+) -> Result<(), Error> {
+    let guild_id = ctx.guild_id().unwrap().get();
+    let guild_id = 545745915151908865u64;
+
+    // Fetch any birthdays if any
+    let month_query = if month.is_some() {
+        format!(" AND birthmonth = {}", month.unwrap())
+    } else {
+        String::new()
+    };
+
+    let query = format!("SELECT * FROM birthday WHERE guild_id = {guild_id}{month_query} ORDER BY birthmonth, birthday");
+
+    let birthdays: Vec<Birthday> = sqlx::query_as(&query)
+        .fetch_all(&ctx.data().database)
+        .await
+        .unwrap();
+    
+    if birthdays.len() == 0 {
+        return Err("No birthdays found for this server!".into());
+    }
+
+    // Build birthday list embed
+    let mut birthday_embed = serenity::CreateEmbed::new()
+        .colour(0xFFC60A)
+        .title("User Birthdays");
+
+    let mut embed_desc = String::new();
+
+    for (i, birthday) in birthdays.into_iter().enumerate() {
+        // Fetch username from UserID
+        let username = serenity::UserId::new(birthday.user_id).to_user(&ctx.serenity_context().http).await.unwrap().name;
+
+        embed_desc = format!("{embed_desc}\n- **[{}]** {} - ID: {} - Birthday: {}/{}",
+            i + 1,
+            username,
+            birthday.user_id,
+            birthday.birthday,
+            birthday.birthmonth);
+    }
+    birthday_embed = birthday_embed.description(embed_desc);
+
+    // Send birthday list
+    ctx.send(poise::CreateReply::default()
+        .embed(birthday_embed)).await?;
 
     Ok(())
 }
