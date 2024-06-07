@@ -226,7 +226,7 @@ async fn main() {
                     birthday_gifs,
                     slap_gifs,
                     self_slap_gifs,
-                    client
+                    client,
                 })
             })
         })
@@ -238,6 +238,7 @@ async fn main() {
 
                 misc::slap(),
                 misc::cookie(),
+                misc::bomb(),
 
                 welcome::welcome(),
 
