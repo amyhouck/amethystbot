@@ -6,7 +6,6 @@ use rand::{Rng, thread_rng};
 use std::str::FromStr;
 use std::time::Duration;
 
-//mod pokemon;
 mod birthday;
 mod misc;
 mod welcome;
@@ -232,8 +231,6 @@ async fn main() {
         })
         .options(poise::FrameworkOptions {
             commands: vec![
-                //pokemon::poke_commands::starter(),
-
                 birthday::bday(),
 
                 misc::slap(),
