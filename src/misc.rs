@@ -23,15 +23,16 @@ pub async fn slap(
     };
 
     let embed_msg = if &victim == ctx.author() {
-        format!("{}, stop hitting yourself...stop hitting yourself", ctx.author())
+        String::from("Stop hitting yourself...stop hitting yourself!")
     } else {
-        format!("{} slaps {} around a bit with a large trout!", ctx.author(), victim)
+        format!("{} slaps you around a bit with a large trout!", ctx.author())
     };
 
     let embed = serenity::CreateEmbed::new()
+        .description(embed_msg)
         .image(random_gif);
 
-    ctx.send(poise::CreateReply::default().content(embed_msg).embed(embed)).await?;
+    ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
 
     Ok(())
 }
@@ -52,15 +53,16 @@ pub async fn cookie(
     };
 
     let embed_msg = if ctx.author() == &victim {
-        format!("{}, NO! NO COOKIES FOR YOU!", ctx.author())
+        String::from("NO! NO COOKIES FOR YOU!")
     } else {
-        format!("{}, {} has given you a cookie!", victim, ctx.author())
+        format!("{} has given you a cookie!", ctx.author())
     };
 
     let embed = serenity::CreateEmbed::new()
+        .description(embed_msg)
         .image(embed_image);
 
-    ctx.send(poise::CreateReply::default().content(embed_msg).embed(embed)).await?;
+    ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
 
     Ok(())
 }
