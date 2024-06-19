@@ -17,6 +17,7 @@ pub struct Data { // User data, which is stored and accessible in all command in
     birthday_gifs: Vec<String>,
     slap_gifs: Vec<String>,
     self_slap_gifs: Vec<String>,
+    tea_gifs: Vec<String>,
     client: reqwest::Client,
 }
 
@@ -207,6 +208,11 @@ async fn main() {
         "https://i.makeagif.com/media/6-19-2015/rh-Yg3.gif".to_string(),
     ];
 
+    let tea_gifs: Vec<String> = vec![
+        "https://media1.tenor.com/m/gyNQ_0VaG-0AAAAC/dalek-exterminate.gif".to_string(),
+        "https://media1.tenor.com/m/IXyaShXuq_IAAAAC/doctor-who-sip.gif".to_string(),
+    ];
+
     let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
     let intents = serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::GUILD_MEMBERS | serenity::GatewayIntents::GUILD_MESSAGES | serenity::GatewayIntents::MESSAGE_CONTENT;
 
@@ -225,6 +231,7 @@ async fn main() {
                     birthday_gifs,
                     slap_gifs,
                     self_slap_gifs,
+                    tea_gifs,
                     client,
                 })
             })
@@ -236,6 +243,7 @@ async fn main() {
                 misc::slap(),
                 misc::cookie(),
                 misc::bomb(),
+                misc::tea(),
 
                 welcome::welcome(),
 

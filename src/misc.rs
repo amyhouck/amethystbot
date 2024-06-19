@@ -67,6 +67,37 @@ pub async fn cookie(
     Ok(())
 }
 
+/// We love tea
+#[poise::command(
+    slash_command,
+    guild_only,
+    member_cooldown = 5
+)]
+pub async fn tea(
+    ctx: Context<'_>,
+    victim: serenity::User
+) -> Result<(), Error> {
+    let embed_gif = {
+        let mut rng = thread_rng();
+        let gif_id = rng.gen_range(0..ctx.data().tea_gifs.len());
+        &ctx.data().tea_gifs[gif_id]
+    };
+
+    let embed_msg = if &victim == ctx.author() {
+        String::from("You have received some tea!")
+    } else {
+        format!("{} has given you some tea!", ctx.author())
+    };
+
+    let embed = serenity::CreateEmbed::new()
+        .description(embed_msg)
+        .image(embed_gif);
+
+    ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
+
+    Ok(())
+}
+
 /*---------------
 | Bomb Minigame |
 ---------------*/
