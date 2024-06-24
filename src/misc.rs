@@ -22,17 +22,29 @@ pub async fn slap(
         }
     };
 
-    let embed_msg = if &victim == ctx.author() {
+    let mut embed_msg = if &victim == ctx.author() {
         String::from("Stop hitting yourself...stop hitting yourself!")
     } else {
         format!("{} slaps you around a bit with a large trout!", ctx.author())
     };
 
+    // Override for a certain someone
+    let mut victim = victim.id.get();
+    if ctx.guild_id().unwrap().get() == 545745915151908865 {
+        let mut rng = thread_rng();
+        let dice_roll = rng.gen_range(1..=6);
+
+        if dice_roll == 3 {
+            embed_msg = format!("{} tried to slap <@{}>, but hit <@606613164934692905> instead!", ctx.author(), victim);
+            victim = 606613164934692905;
+        }
+    }
+
     let embed = serenity::CreateEmbed::new()
         .description(embed_msg)
         .image(random_gif);
 
-    ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
+    ctx.send(poise::CreateReply::default().content(format!("<@{}>", victim)).embed(embed)).await?;
 
     Ok(())
 }
