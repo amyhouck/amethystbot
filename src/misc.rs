@@ -98,6 +98,40 @@ pub async fn tea(
     Ok(())
 }
 
+/// It is not a lie
+#[poise::command(
+    slash_command,
+    guild_only,
+    member_cooldown = 5
+)]
+pub async fn cake(
+    ctx: Context<'_>,
+    victim: serenity::User
+) -> Result<(), Error> {
+    let gif_id = {
+        let mut rng = thread_rng();
+        rng.gen_range(0..ctx.data().cake_gifs.len())
+    };
+
+    let embed_gif = &ctx.data().cake_gifs[gif_id];
+
+    let embed_msg = if gif_id == 2 {
+            String::from("***The cake is a lie***")
+        } else if &victim == ctx.author() {
+            String::from("You got some cake!")
+        } else {
+            format!("{} has given you some cake! Hope you like it!", ctx.author())
+        };
+
+    let embed = serenity::CreateEmbed::new()
+        .description(embed_msg)
+        .image(embed_gif);
+
+    ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
+
+    Ok(())
+}
+
 /*---------------
 | Bomb Minigame |
 ---------------*/

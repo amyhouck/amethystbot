@@ -18,6 +18,7 @@ pub struct Data { // User data, which is stored and accessible in all command in
     slap_gifs: Vec<String>,
     self_slap_gifs: Vec<String>,
     tea_gifs: Vec<String>,
+    cake_gifs: Vec<String>,
     client: reqwest::Client,
 }
 
@@ -213,6 +214,12 @@ async fn main() {
         "https://media1.tenor.com/m/IXyaShXuq_IAAAAC/doctor-who-sip.gif".to_string(),
     ];
 
+    let cake_gifs: Vec<String> = vec![
+        "https://media1.tenor.com/m/Y0RcGnmG2DkAAAAC/cake-birthday-cake.gif".to_string(),
+        "https://media1.tenor.com/m/uhzaWzEXdjcAAAAd/cake-sprinkles.gif".to_string(),
+        "https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif".to_string()  // GLaDOS specific GIF ID 2
+    ];
+
     let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
     let intents = serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::GUILD_MEMBERS | serenity::GatewayIntents::GUILD_MESSAGES | serenity::GatewayIntents::MESSAGE_CONTENT;
 
@@ -232,6 +239,7 @@ async fn main() {
                     slap_gifs,
                     self_slap_gifs,
                     tea_gifs,
+                    cake_gifs,
                     client,
                 })
             })
@@ -244,6 +252,7 @@ async fn main() {
                 misc::cookie(),
                 misc::bomb(),
                 misc::tea(),
+                misc::cake(),
 
                 welcome::welcome(),
 
