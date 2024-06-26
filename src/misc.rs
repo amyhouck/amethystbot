@@ -32,7 +32,7 @@ pub async fn slap(
     let mut victim = victim.id.get();
     if ctx.guild_id().unwrap().get() == 545745915151908865 {
         let mut rng = thread_rng();
-        let dice_roll = rng.gen_range(1..=6);
+        let dice_roll = rng.gen_range(1..=5);
 
         if dice_roll == 3 {
             embed_msg = format!("{} tried to slap <@{}>, but hit <@606613164934692905> instead!", ctx.author(), victim);
