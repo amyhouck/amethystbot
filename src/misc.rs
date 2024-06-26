@@ -172,9 +172,9 @@ pub async fn bomb(
     target: serenity::User
 ) -> Result<(), Error> {
     // Don't allow attacking self
-    if &target == ctx.author() {
-        return Err("You can't do that!".into());
-    }
+    //if &target == ctx.author() {
+      //  return Err("You can't do that!".into());
+    //}
 
     // Build bomb
     let ctx_id = ctx.id();
@@ -225,7 +225,7 @@ pub async fn bomb(
         .description(format!("{} has sent you a bomb! Defuse it quickly! You have 20 seconds!", ctx.author().name))
         .color(0xFF0000);
 
-    ctx.send(poise::CreateReply::default()
+    let msg = ctx.send(poise::CreateReply::default()
         .content(format!("{target}"))
         .embed(bomb_embed)
         .components(vec![buttons])).await?;
@@ -257,6 +257,7 @@ pub async fn bomb(
                 serenity::EditMessage::new()
                     .embed(serenity::CreateEmbed::new()
                         .description("You have successfully defused the bomb!")
+                        .image("https://media1.tenor.com/m/vu6SmJziKVUAAAAd/defusing-bomb-call-of-duty.gif")
                         .color(0x00FF00))
                     .components(Vec::new())
             ).await?;
@@ -271,6 +272,7 @@ pub async fn bomb(
                 serenity::EditMessage::new()
                     .embed(serenity::CreateEmbed::new()
                         .description("Wrong wire!! ***KABOOM***")
+                        .image("https://media1.tenor.com/m/_TQcegphP7MAAAAd/boom-bomb.gif")
                         .color(0xFF0000))
                     .components(Vec::new())
             ).await?;
@@ -281,7 +283,14 @@ pub async fn bomb(
     }
 
     if !bomb.exploded {
-        ctx.say("You ran out of time :(").await?;
+        msg.edit(ctx, poise::CreateReply::default()
+            .embed(serenity::CreateEmbed::new()
+                .description("***KABOOM*** You ran out of time!")
+                .image("https://media1.tenor.com/m/4H_YjM4P2IkAAAAC/bh187-spongebob.gif")
+                .color(0xFF0000)
+            )
+            .components(Vec::new())
+        ).await?;
     }
 
     Ok(())
