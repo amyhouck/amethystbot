@@ -6,7 +6,8 @@ use chrono::Utc;
 /// Slap slap slap, clap clap clap
 #[poise::command(
     slash_command,
-    member_cooldown = 5
+    member_cooldown = 5,
+    guild_only,
 )]
 pub async fn slap(
     ctx: Context<'_>,
@@ -52,7 +53,8 @@ pub async fn slap(
 /// Cookiiiieeeesssssss
 #[poise::command(
     slash_command,
-    member_cooldown = 5
+    member_cooldown = 5,
+    guild_only
 )]
 pub async fn cookie(
     ctx: Context<'_>,
