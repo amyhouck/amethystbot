@@ -1,4 +1,5 @@
 use crate::{Context, Error};
+use crate::user_table_check;
 use poise::serenity_prelude as serenity;
 use rand::{Rng, thread_rng};
 use chrono::Utc;
@@ -47,6 +48,8 @@ pub async fn slap(
 
     ctx.send(poise::CreateReply::default().content(format!("<@{}>", victim)).embed(embed)).await?;
 
+    // Check for victim in DB before finalizing
+    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), victim).await;
     Ok(())
 }
 
@@ -78,6 +81,8 @@ pub async fn cookie(
 
     ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
 
+    // Check for victim in DB before finalizing
+    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), victim.id.get()).await;
     Ok(())
 }
 
@@ -109,6 +114,8 @@ pub async fn tea(
 
     ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
 
+    // Check for victim in DB before finalizing
+    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), victim.id.get()).await;
     Ok(())
 }
 
@@ -143,6 +150,8 @@ pub async fn cake(
 
     ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
 
+    // Check for victim in DB before finalizing
+    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), victim.id.get()).await;
     Ok(())
 }
 
@@ -172,9 +181,9 @@ pub async fn bomb(
     target: serenity::User
 ) -> Result<(), Error> {
     // Don't allow attacking self
-    //if &target == ctx.author() {
-      //  return Err("You can't do that!".into());
-    //}
+    if &target == ctx.author() {
+        return Err("You can't do that!".into());
+    }
 
     // Build bomb
     let ctx_id = ctx.id();
@@ -200,7 +209,6 @@ pub async fn bomb(
         exploded: false,
         tries_remaining: 1,
     };
-    println!("{:#?}", bomb);
 
     // Create and send message
     let button_ids: [String; 5] = [
@@ -293,5 +301,7 @@ pub async fn bomb(
         ).await?;
     }
 
+    // Check for victim in DB before finalizing
+    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), target.id.get()).await;
     Ok(())
 }
