@@ -1,5 +1,5 @@
 use crate::{Context, Error};
-use crate::user_table_check;
+use crate::data::user_table_check;
 use poise::serenity_prelude as serenity;
 use rand::{Rng, thread_rng};
 use chrono::Utc;
@@ -48,8 +48,24 @@ pub async fn slap(
 
     ctx.send(poise::CreateReply::default().content(format!("<@{}>", victim)).embed(embed)).await?;
 
-    // Check for victim in DB before finalizing
-    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), victim).await;
+    // Stat handling
+    let guild_id = ctx.guild_id().unwrap().get();
+    let executioner_id = ctx.author().id.get();
+    user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
+    user_table_check(&ctx.data().database, guild_id, victim).await;  // - Check victim's existence
+
+    // Update executioner's stats
+    sqlx::query!("UPDATE users SET slap_sent = slap_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
+    // Update victim's stats
+    sqlx::query!("UPDATE users SET slap_received = slap_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
     Ok(())
 }
 
@@ -81,8 +97,25 @@ pub async fn cookie(
 
     ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
 
-    // Check for victim in DB before finalizing
-    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), victim.id.get()).await;
+    // Stat handling
+    let guild_id = ctx.guild_id().unwrap().get();
+    let executioner_id = ctx.author().id.get();
+    let victim_id = victim.id.get();
+    user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
+    user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
+
+    // Update executioner's stats
+    sqlx::query!("UPDATE users SET cookie_sent = cookie_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
+    // Update victim's stats
+    sqlx::query!("UPDATE users SET cookie_received = cookie_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
     Ok(())
 }
 
@@ -114,8 +147,25 @@ pub async fn tea(
 
     ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
 
-    // Check for victim in DB before finalizing
-    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), victim.id.get()).await;
+    // Stat handling
+    let guild_id = ctx.guild_id().unwrap().get();
+    let executioner_id = ctx.author().id.get();
+    let victim_id = victim.id.get();
+    user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
+    user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
+
+    // Update executioner's stats
+    sqlx::query!("UPDATE users SET tea_sent = tea_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
+    // Update victim's stats
+    sqlx::query!("UPDATE users SET tea_received = tea_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
     Ok(())
 }
 
@@ -129,20 +179,29 @@ pub async fn cake(
     ctx: Context<'_>,
     victim: serenity::User
 ) -> Result<(), Error> {
+    // Praise the RNG
     let gif_id = {
         let mut rng = thread_rng();
         rng.gen_range(0..ctx.data().cake_gifs.len())
     };
 
-    let embed_gif = &ctx.data().cake_gifs[gif_id];
+    let glados = {
+        let mut rng = thread_rng();
+        rng.gen_range(1..=10)
+    };
 
-    let embed_msg = if gif_id == 2 {
-            String::from("***The cake is a lie***")
-        } else if &victim == ctx.author() {
-            String::from("You got some cake!")
-        } else {
-            format!("{} has given you some cake! Hope you like it!", ctx.author())
-        };
+    // Set message info
+    let embed_gif = if glados == 9 {
+        "https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif"
+    } else {
+        &ctx.data().cake_gifs[gif_id]
+    };
+
+    let embed_msg = if glados == 9 {
+        String::from("***The cake is a lie***")
+    } else {
+        format!("{} has given you some cake! Hope you like it!", ctx.author())
+    };
 
     let embed = serenity::CreateEmbed::new()
         .description(embed_msg)
@@ -150,8 +209,25 @@ pub async fn cake(
 
     ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
 
-    // Check for victim in DB before finalizing
-    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), victim.id.get()).await;
+    // Stat handling
+    let guild_id = ctx.guild_id().unwrap().get();
+    let executioner_id = ctx.author().id.get();
+    let victim_id = victim.id.get();
+    user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
+    user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
+
+    // Update executioner's stats
+    sqlx::query!("UPDATE users SET cake_sent = cake_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
+    // Update victim's stats
+    sqlx::query!("UPDATE users SET cake_received = cake_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
     Ok(())
 }
 
@@ -160,9 +236,11 @@ pub async fn cake(
 ---------------*/
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct ActiveBomb {
     pub guild_id: u64,
     pub target: u64,
+    pub sender: u64,
     pub wire_id: String,
     pub armed_time: i32,
     pub defuse_time: i32,
@@ -202,6 +280,7 @@ pub async fn bomb(
 
     let mut bomb = ActiveBomb {
         guild_id: ctx.guild_id().unwrap().get(),
+        sender: ctx.author().id.get(),
         target: target.id.get(),
         wire_id,
         armed_time: Utc::now().format("%s").to_string().parse::<i32>().unwrap(),
@@ -238,6 +317,14 @@ pub async fn bomb(
         .embed(bomb_embed)
         .components(vec![buttons])).await?;
 
+    // Handle executioner stats and check for target
+    user_table_check(&ctx.data().database, bomb.guild_id, bomb.sender).await;
+    user_table_check(&ctx.data().database, bomb.guild_id, bomb.target).await;
+    sqlx::query!("UPDATE users SET bomb_sent = bomb_sent + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.sender)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
     // Button clicking event
     while let Some(press) = serenity::collector::ComponentInteractionCollector::new(ctx)
         .filter(move |press| press.data.custom_id.starts_with(&ctx_id.to_string()))
@@ -246,6 +333,7 @@ pub async fn bomb(
         .await
     {
         // Update embed depending on cut attempt
+        // - Dummy wire
         if bomb.tries_remaining > 0 && press.data.custom_id != bomb.wire_id {
             let mut msg = press.message.clone();
             msg.edit(ctx, 
@@ -259,7 +347,9 @@ pub async fn bomb(
             continue;
         }
 
+        // - Success
         if press.data.custom_id == bomb.wire_id {
+            // Handle interaction
             let mut msg = press.message.clone();
             msg.edit(ctx, 
                 serenity::EditMessage::new()
@@ -271,10 +361,19 @@ pub async fn bomb(
             ).await?;
             bomb.exploded = true;
             press.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
+
+            // Handle stats for target
+            sqlx::query!("UPDATE users SET bomb_defused = bomb_defused + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.target)
+                .execute(&ctx.data().database)
+                .await
+                .unwrap();
+
             break;
         }
 
+        // - Wrong wire
         if press.data.custom_id != bomb.wire_id  {
+            // Handle interaction
             let mut msg = press.message.clone();
             msg.edit(ctx, 
                 serenity::EditMessage::new()
@@ -286,10 +385,18 @@ pub async fn bomb(
             ).await?;
             bomb.exploded = true;
             press.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
+
+            // Handle target stats
+            sqlx::query!("UPDATE users SET bomb_failed = bomb_failed + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.target)
+                .execute(&ctx.data().database)
+                .await
+                .unwrap();
+
             break;
         }
     }
 
+    // Check if bomb is still active after timeout
     if !bomb.exploded {
         msg.edit(ctx, poise::CreateReply::default()
             .embed(serenity::CreateEmbed::new()
@@ -299,9 +406,12 @@ pub async fn bomb(
             )
             .components(Vec::new())
         ).await?;
+
+        sqlx::query!("UPDATE users SET bomb_failed = bomb_failed + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.target)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
     }
 
-    // Check for victim in DB before finalizing
-    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), target.id.get()).await;
     Ok(())
 }

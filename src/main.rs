@@ -12,6 +12,7 @@ mod welcome;
 mod mtg;
 mod digimon;
 mod stats;
+mod data;
 
 #[derive(Debug)]
 pub struct Data { // User data, which is stored and accessible in all command invocations
@@ -189,31 +190,6 @@ async fn birthday_check(ctx: &serenity::Context, data: &Data) {
 }
 
 //--------------------------
-// User table checker
-//--------------------------
-async fn user_table_check(database: &sqlx::MySqlPool, guild_id: u64, user_id: u64) {
-    // If user doesn't exist, add row
-    let count = sqlx::query!("SELECT COUNT(user_id) AS count FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
-            .fetch_one(database)
-            .await
-            .unwrap();
-
-    if count.count == 0 {
-        let query_attempt = sqlx::query!("INSERT INTO users (guild_id, user_id) VALUES (?, ?)", guild_id, user_id)
-            .execute(database)
-            .await;
-        
-        match query_attempt {
-            Ok(_) => println!("[ LOG ] New user added to database - GuildID: {guild_id} - UserID: {user_id}"),
-            Err(e) => {
-                println!("[ ERROR ] Error occurred while adding a user to the database:");
-                println!("{e}");
-            }
-        }
-    }
-}
-
-//--------------------------
 // Main
 //--------------------------
 #[tokio::main]
@@ -249,7 +225,6 @@ async fn main() {
     let cake_gifs: Vec<String> = vec![
         "https://media1.tenor.com/m/Y0RcGnmG2DkAAAAC/cake-birthday-cake.gif".to_string(),
         "https://media1.tenor.com/m/uhzaWzEXdjcAAAAd/cake-sprinkles.gif".to_string(),
-        "https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif".to_string()  // GLaDOS specific GIF ID 2
     ];
 
     let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
@@ -293,11 +268,6 @@ async fn main() {
                 digimon::digimon(),
             ],
             event_handler: |ctx, event, framework, data| Box::pin(listener(ctx, event, framework, data)),
-            post_command: |ctx| {
-                Box::pin(async move {
-                    user_table_check(&ctx.data().database, ctx.guild_id().unwrap().get(), ctx.author().id.get()).await; // Check for executioner in DB
-                })
-            },
             ..Default::default()
         })
         .build();
