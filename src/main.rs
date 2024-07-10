@@ -254,18 +254,15 @@ async fn main() {
         .options(poise::FrameworkOptions {
             commands: vec![
                 birthday::bday(),
-
                 misc::slap(),
                 misc::cookie(),
                 misc::bomb(),
                 misc::tea(),
                 misc::cake(),
-
                 welcome::welcome(),
-
                 mtg::mtg(),
-
                 digimon::digimon(),
+                stats::stats(),
             ],
             event_handler: |ctx, event, framework, data| Box::pin(listener(ctx, event, framework, data)),
             ..Default::default()

@@ -22,3 +22,23 @@ pub async fn user_table_check(database: &sqlx::MySqlPool, guild_id: u64, user_id
         }
     }
 }
+
+//--------------------------
+// User structure
+//--------------------------
+#[derive(Debug)]
+pub struct User {
+    pub guild_id: u64,
+    pub user_id: u64,
+    pub cookie_sent: u32,
+    pub cookie_received: u32,
+    pub slap_sent: u32,
+    pub slap_received: u32,
+    pub cake_sent: u32,
+    pub cake_received: u32,
+    pub tea_sent: u32,
+    pub tea_received: u32,
+    pub bomb_sent: u32,
+    pub bomb_defused: u32,
+    pub bomb_failed: u32,
+}
