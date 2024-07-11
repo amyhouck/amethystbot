@@ -29,9 +29,13 @@ pub async fn stats(
         .unwrap();
     
     // Build stats embed
-    let title_name = match user.nick_in(ctx.http(), guild_id).await {
-        Some(n) => n,
-        None => String::from(&user.name)
+    let server_nick = user.nick_in(ctx.http(), guild_id).await;
+    let title_name = if server_nick.is_some() {
+        server_nick.unwrap()
+    } else if user.global_name.is_some() {
+        user.global_name.as_ref().unwrap().to_string()
+    } else {
+        String::from(&user.name)
     };
 
     let embed_desc = format!("**Cookies sent:** {0}\n**Cookies received:** {1}\n\n**Cakes sent:** {2}\n**Cakes received:** {3}\n\n**Cups of tea given:** {6}\n**Cups of tea received:** {7}\n\n**People slapped:** {4}\n**Slaps received:** {5}\n\n**Bombs sent:** {8}\n**Bombs defused:** {9}\n**Times exploded:** {10}",
