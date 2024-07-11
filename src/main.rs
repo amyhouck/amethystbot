@@ -5,6 +5,7 @@ use cron::Schedule;
 use rand::{Rng, thread_rng};
 use std::str::FromStr;
 use std::time::Duration;
+use crate::log::log;
 
 mod birthday;
 mod misc;
@@ -12,6 +13,7 @@ mod welcome;
 mod mtg;
 mod stats;
 mod data;
+mod log;
 
 #[derive(Debug)]
 pub struct Data { // User data, which is stored and accessible in all command invocations
@@ -262,6 +264,23 @@ async fn main() {
                 mtg::mtg(),
                 stats::stats(),
             ],
+            pre_command: |ctx| {
+                Box::pin(async move {
+                    let guild_id = match ctx.guild_id() {
+                        Some(id) => Some(id.get()),
+                        None => None
+                    };
+
+                    let log_info = log::LogType::COMMAND_EXECUTION {
+                        guild_id,
+                        channel_id: ctx.channel_id().get(),
+                        user_id: ctx.author().id.get(),
+                        command_name: String::from(&ctx.command().name)
+                    };
+
+                    log(log_info)
+                })
+            },
             event_handler: |ctx, event, framework, data| Box::pin(listener(ctx, event, framework, data)),
             ..Default::default()
         })
