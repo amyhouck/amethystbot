@@ -10,7 +10,6 @@ mod birthday;
 mod misc;
 mod welcome;
 mod mtg;
-mod digimon;
 mod stats;
 mod data;
 
@@ -261,7 +260,6 @@ async fn main() {
                 misc::cake(),
                 welcome::welcome(),
                 mtg::mtg(),
-                digimon::digimon(),
                 stats::stats(),
             ],
             event_handler: |ctx, event, framework, data| Box::pin(listener(ctx, event, framework, data)),
