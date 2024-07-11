@@ -1,5 +1,3 @@
-use std::default;
-
 use crate::{Context, Error};
 use crate::data::{user_table_check, User};
 use poise::serenity_prelude as serenity;
