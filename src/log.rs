@@ -1,24 +1,44 @@
+use crate::Context;
+
 // Logging type container
-pub enum LogType {
-    COMMAND_EXECUTION { guild_id: Option<u64>, channel_id: u64, user_id: u64, command_name: String },
-    COMMAND_ERROR { guild_id: Option<u64>, channel_id: u64, user_id: u64, command_name: String },
+pub enum LogType<'a> {
+    CommandExecution { ctx: Context<'a> },
+    CommandError { ctx: Context<'a>, error_msg: String },
 }
 
 // Logging function
-pub fn log(log_info: LogType) {
+pub fn write_log(log_info: LogType) {
     match log_info {
-        LogType::COMMAND_EXECUTION { guild_id, channel_id, user_id, command_name } => {
-            let command_location = if guild_id.is_none() {
+        LogType::CommandExecution { ctx } => {
+            let command_location = if ctx.guild_id().is_none() {
                 String::from("User DM")
             } else {
-                format!("Guild ID: {}", guild_id.unwrap())
+                format!("Guild ID: {}", ctx.guild_id().unwrap().get())
             };
 
-            let msg = format!("[ LOG ] Command execution - {command_location} - Channel ID: {channel_id} - User ID: {user_id} - Command: {command_name}");
+            let msg = format!("[ LOG ] Command execution - {command_location} - Channel ID: {} - User ID: {} - Command: {}",
+                ctx.channel_id().get(),
+                ctx.author().id.get(),
+                ctx.command().name,
+            );
             println!("{msg}");
         },
-        LogType::COMMAND_ERROR { guild_id, channel_id, user_id, command_name } => {
-            
+        LogType::CommandError { ctx, error_msg } => {
+            let command_location = if ctx.guild_id().is_none() {
+                String::from("User DM")
+            } else {
+                format!("Guild ID: {}", ctx.guild_id().unwrap().get())
+            };
+
+            let msg = format!("[ LOG ] Command error - {command_location} - Channel ID: {} - User ID: {} - Command: {}",
+                ctx.channel_id().get(),
+                ctx.author().id.get(),
+                ctx.command().name,
+            );
+            println!("{msg}");
+
+            let msg = format!("[ LOG ] Error: {error_msg}");
+            println!("{msg}");
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::{Context, Error};
+use crate::{log, Context, Error};
 use crate::data::user_table_check;
 use poise::serenity_prelude as serenity;
 use rand::{Rng, thread_rng};
@@ -260,6 +260,8 @@ pub async fn bomb(
 ) -> Result<(), Error> {
     // Don't allow attacking self
     if &target == ctx.author() {
+        log::write_log(log::LogType::CommandError { ctx, error_msg: String::from("User tried to bomb themself.") });
+
         return Err("You can't do that!".into());
     }
 
