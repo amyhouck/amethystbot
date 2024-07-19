@@ -31,12 +31,13 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framework: poise::FrameworkContext<'_, Data, Error>, data: &Data) -> Result<(), Error> {
     match event {
         serenity::FullEvent::Ready { .. } => {
-            println!("AmethystBot online!");
+            log::write_log(log::LogType::BotStartup);
             birthday_check(ctx, data).await;
         },
 
         serenity::FullEvent::GuildCreate { guild, .. } => {
             let guild_id = guild.id.get();
+
             // Check guild_settings
             let count = sqlx::query!("SELECT COUNT(guild_id) AS count FROM guild_settings WHERE guild_id = ?", guild_id)
                 .fetch_one(&data.database)
@@ -49,7 +50,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                     .await
                     .unwrap();
 
-                println!("[GUILD] Added guild to table \"guild_settings\": {} (ID: {})", guild.name, guild.id.get());
+                log::write_log(log::LogType::BotGuildDBRegister { guild_id, table_name: String::from("guild_settings") });
             }
     
             // Check welcome table
@@ -64,8 +65,10 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                     .await
                     .unwrap();
 
-                println!("[GUILD] Added guild to table \"welcome\": {} (ID: {})", guild.name, guild.id.get());
+                log::write_log(log::LogType::BotGuildDBRegister { guild_id, table_name: String::from("welcome") });
             }
+
+            log::write_log(log::LogType::BotGuildLogin { guild_id });
         },
 
         serenity::FullEvent::GuildMemberAddition { new_member } => {
@@ -90,6 +93,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             let channel = serenity::ChannelId::new(welcome.channel_id.unwrap());
 
             channel.send_message(&ctx, serenity::CreateMessage::new().embed(welcome_embed)).await.unwrap();
+            log::write_log(log::LogType::WelcomeNewUser { guild_id });
         },
 
         serenity::FullEvent::Message { new_message } => {
@@ -183,7 +187,7 @@ async fn birthday_check(ctx: &serenity::Context, data: &Data) {
         let schedule: Vec<_> = schedule.upcoming(Utc).take(1).collect();
         let duration = schedule[0].signed_duration_since(current_time);
         
-        println!("[ BIRTHDAY CHECK ] Duration until next check: {duration}");
+        log::write_log(log::LogType::BirthdayTimerReset { duration: duration.to_string() });
 
         tokio::time::sleep(duration.to_std().unwrap()).await;
     }

@@ -1,3 +1,5 @@
+use crate::log;
+
 //--------------------------
 // User table checker
 //--------------------------
@@ -14,11 +16,8 @@ pub async fn user_table_check(database: &sqlx::MySqlPool, guild_id: u64, user_id
             .await;
         
         match query_attempt {
-            Ok(_) => println!("[ LOG ] New user added to database - GuildID: {guild_id} - UserID: {user_id}"),
-            Err(e) => {
-                println!("[ ERROR ] Error occurred while adding a user to the database:");
-                println!("{e}");
-            }
+            Ok(_) => log::write_log(log::LogType::UserDBRegister { guild_id, user_id }),
+            Err(e) => log::write_log(log::LogType::DBError { db_error: e.to_string() })
         }
     }
 }

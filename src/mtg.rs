@@ -1,4 +1,4 @@
-use crate::{Context, Error};
+use crate::{log, Context, Error};
 use poise::serenity_prelude as serenity;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
@@ -255,15 +255,14 @@ pub async fn card(
     let scryfall = match scryfall {
         Ok(data) => data.json::<serde_json::Value>().await.unwrap(),
         Err(err) => {
-            println!("[ Scryfall - ERROR ] Encountered error requesting from Scryfall: {err}");
+            log::write_log(log::LogType::MTGScryfallParsingError { error: err.to_string() });
             return Err("There was an error processing your request!".into());
         }
     };
 
     // Handle errors
     if scryfall["object"].as_str().unwrap() == "error" {
-        println!("[ Scryfall - ERROR ] Encountered error for Scryfall data ({}) - {}", scryfall["status"].as_i64().unwrap(), scryfall["code"].as_str().unwrap());
-
+        log::write_log(log::LogType::MTGScryfallError { error: scryfall["details"].as_str().unwrap().to_string() });
         return Err(format!("{}", scryfall["details"].as_str().unwrap()).into());
     }
 
