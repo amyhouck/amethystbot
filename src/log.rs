@@ -20,6 +20,7 @@ pub enum LogType<'a> {
 
     // User Logging
     UserDBRegister { guild_id: u64, user_id: u64 },
+    UserDBRemove,
 
     // Database Logging
     DBError { db_error: String },
@@ -102,6 +103,11 @@ pub fn write_log(log_info: LogType) {
         // User Logging
         LogType::UserDBRegister { guild_id, user_id } => {
             let msg = format!("[ USER ] New user added to database - Guild ID: {guild_id} - User ID: {user_id}");
+            println!("{msg}");
+        },
+
+        LogType::UserDBRemove => {
+            let msg = format!("[ USER ] User left a server and associated data has been removced.");
             println!("{msg}");
         },
 

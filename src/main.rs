@@ -96,6 +96,25 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             log::write_log(log::LogType::WelcomeNewUser { guild_id });
         },
 
+        serenity::FullEvent::GuildMemberRemoval { guild_id, user, ..} => {
+            let guild_id = guild_id.get();
+            let user_id = user.id.get();
+
+            // Remove user from birthday, users
+            sqlx::query!("DELETE FROM birthday WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                .execute(&data.database)
+                .await
+                .unwrap();
+
+
+            sqlx::query!("DELETE FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                .execute(&data.database)
+                .await
+                .unwrap();
+
+            log::write_log(log::LogType::UserDBRemove);
+        },
+
         serenity::FullEvent::Message { new_message } => {
             if new_message.author.id.get() == 375805687529209857u64 && new_message.content.contains("Desiner") {
                 new_message.channel_id.say(&ctx, "Desiner").await?;
