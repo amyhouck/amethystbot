@@ -285,6 +285,7 @@ async fn main() {
                 welcome::welcome(),
                 mtg::mtg(),
                 stats::stats(),
+                stats::serverstats(),
             ],
             pre_command: |ctx| {
                 Box::pin(async move {

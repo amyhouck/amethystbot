@@ -41,3 +41,17 @@ pub struct User {
     pub bomb_defused: u32,
     pub bomb_failed: u32,
 }
+
+//--------------------------
+// Server stats structure
+//--------------------------
+#[derive(Default)]
+pub struct ServerStats {
+    pub cookie_sent: u32,
+    pub slap_sent: u32,
+    pub cake_sent: u32,
+    pub tea_sent: u32,
+    pub bomb_sent: u32,
+    pub bomb_defused: u32,
+    pub bomb_failed: u32,
+}

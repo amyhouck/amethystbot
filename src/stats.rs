@@ -1,4 +1,4 @@
-use crate::{Context, Error};
+use crate::{data, Context, Error};
 use crate::data::{user_table_check, User};
 use poise::serenity_prelude as serenity;
 
@@ -57,5 +57,62 @@ pub async fn stats(
         .colour(0x8caac2);
 
     ctx.send(poise::CreateReply::default().embed(stat_embed)).await?;
+    Ok(())
+}
+
+/// Get total stats of the server.
+#[poise::command(
+    slash_command,
+    guild_only,
+    member_cooldown = 5
+)]
+pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
+    // Query all data from user stats for the server
+    let guild_id = ctx.guild_id().unwrap().get();
+
+    let server_data = sqlx::query!("SELECT * FROM users WHERE guild_id = ?", guild_id)
+        .fetch_all(&ctx.data().database)
+        .await
+        .unwrap();
+
+    // If no data, return msg. Else combine into server struct
+    if server_data.is_empty() {
+        ctx.say("This server does not have any stats available yet!").await?;
+        return Ok(());
+    }
+
+    let mut server_stats = data::ServerStats::default();
+    for record in server_data {
+        server_stats.bomb_defused += record.bomb_defused;
+        server_stats.bomb_failed += record.bomb_failed;
+        server_stats.bomb_sent += record.bomb_sent;
+        server_stats.cake_sent += record.cake_sent;
+        server_stats.cookie_sent += record.cookie_sent;
+        server_stats.tea_sent += record.tea_sent;
+        server_stats.slap_sent += record.slap_sent;
+    }
+
+    // Build and send stats embed
+    let embed_desc = format!("**Cookies sent:** {0}\n**Cakes sent:** {1}\n**Tea sent:** {2}\n**Slaps sent:** {3}\n\n**Bombs sent:** {4}\n**Bombs defused:** {5}\n**Bombs exploded:** {6}",
+        server_stats.cookie_sent,
+        server_stats.cake_sent,
+        server_stats.tea_sent,
+        server_stats.slap_sent,
+        server_stats.bomb_sent,
+        server_stats.bomb_defused,
+        server_stats.bomb_failed
+    );
+
+    let mut embed = serenity::CreateEmbed::new()
+        .title("Server Stats")
+        .colour(0x8caac2)
+        .description(embed_desc);
+
+    if ctx.guild().unwrap().icon_url().is_some() {
+        embed = embed.thumbnail(ctx.guild().unwrap().icon_url().unwrap());
+    }
+
+    ctx.send(poise::CreateReply::default().embed(embed)).await?;
+
     Ok(())
 }
