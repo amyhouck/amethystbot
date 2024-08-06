@@ -55,4 +55,5 @@ pub struct ServerStats {
     pub bomb_sent: u32,
     pub bomb_defused: u32,
     pub bomb_failed: u32,
+    pub glados_appearances: u32,
 }

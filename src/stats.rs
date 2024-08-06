@@ -91,17 +91,19 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
         server_stats.cookie_sent += record.cookie_sent;
         server_stats.tea_sent += record.tea_sent;
         server_stats.slap_sent += record.slap_sent;
+        server_stats.glados_appearances += record.cake_glados;
     }
 
     // Build and send stats embed
-    let embed_desc = format!("**Cookies sent:** {0}\n**Cakes sent:** {1}\n**Tea sent:** {2}\n**Slaps sent:** {3}\n\n**Bombs sent:** {4}\n**Bombs defused:** {5}\n**Bombs exploded:** {6}",
+    let embed_desc = format!("**Cookies sent:** {0}\n**Cakes sent:** {1}\n**Tea sent:** {2}\n**Slaps sent:** {3}\n**GLaDOS appearances:** {7}\n\n**Bombs sent:** {4}\n**Bombs defused:** {5}\n**Bombs exploded:** {6}",
         server_stats.cookie_sent,
         server_stats.cake_sent,
         server_stats.tea_sent,
         server_stats.slap_sent,
         server_stats.bomb_sent,
         server_stats.bomb_defused,
-        server_stats.bomb_failed
+        server_stats.bomb_failed,
+        server_stats.glados_appearances,
     );
 
     let mut embed = serenity::CreateEmbed::new()
