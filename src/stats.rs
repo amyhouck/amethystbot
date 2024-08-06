@@ -36,7 +36,7 @@ pub async fn stats(
         String::from(&user.name)
     };
 
-    let embed_desc = format!("**Cookies sent:** {0}\n**Cookies received:** {1}\n\n**Cakes sent:** {2}\n**Cakes received:** {3}\n\n**Cups of tea given:** {6}\n**Cups of tea received:** {7}\n\n**People slapped:** {4}\n**Slaps received:** {5}\n\n**Bombs sent:** {8}\n**Bombs defused:** {9}\n**Times exploded:** {10}",
+    let embed_desc = format!("**Cookies sent:** {0}\n**Cookies received:** {1}\n\n**Cakes sent:** {2}\n**Cakes received:** {3}\n**Times GLaDOSed:** {11}\n\n**Cups of tea given:** {6}\n**Cups of tea received:** {7}\n\n**People slapped:** {4}\n**Slaps received:** {5}\n\n**Bombs sent:** {8}\n**Bombs defused:** {9}\n**Times exploded:** {10}",
         user_data.cookie_sent,
         user_data.cookie_received,
         user_data.cake_sent,
@@ -47,7 +47,8 @@ pub async fn stats(
         user_data.tea_received,
         user_data.bomb_sent,
         user_data.bomb_defused,
-        user_data.bomb_failed
+        user_data.bomb_failed,
+        user_data.cake_glados,
     );
 
     let stat_embed = serenity::CreateEmbed::new()

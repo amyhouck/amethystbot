@@ -187,7 +187,7 @@ pub async fn cake(
 
     let glados = {
         let mut rng = thread_rng();
-        rng.gen_range(1..=10)
+        rng.gen_range(1..=20)
     };
 
     // Set message info
@@ -223,10 +223,17 @@ pub async fn cake(
         .unwrap();
 
     // Update victim's stats
-    sqlx::query!("UPDATE users SET cake_received = cake_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+    if glados == 9 {
+        sqlx::query!("UPDATE users SET cake_glados = cake_glados + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+    } else {
+        sqlx::query!("UPDATE users SET cake_received = cake_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+    }
 
     Ok(())
 }

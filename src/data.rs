@@ -35,6 +35,7 @@ pub struct User {
     pub slap_received: u32,
     pub cake_sent: u32,
     pub cake_received: u32,
+    pub cake_glados: u32,
     pub tea_sent: u32,
     pub tea_received: u32,
     pub bomb_sent: u32,
