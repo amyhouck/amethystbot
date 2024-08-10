@@ -13,6 +13,7 @@ mod mtg;
 mod stats;
 mod data;
 mod log;
+mod vctracker;
 
 #[derive(Debug)]
 pub struct Data { // User data, which is stored and accessible in all command invocations
@@ -118,6 +119,98 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
         serenity::FullEvent::Message { new_message } => {
             if new_message.author.id.get() == 375805687529209857u64 && new_message.content.contains("Desiner") {
                 new_message.channel_id.say(&ctx, "Desiner").await?;
+            }
+        },
+
+        serenity::FullEvent::VoiceStateUpdate { old, new } => {
+            // Get needed info
+            let guild_id = new.guild_id.unwrap().get();
+            let user_id = new.user_id.get();
+            
+            data::user_table_check(&data.database, guild_id, user_id).await;
+
+            // Set ignored channel id
+            let ignored_channel_id = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
+                    .fetch_one(&data.database)
+                    .await
+                    .unwrap();
+            let ignored_channel_id = ignored_channel_id.vctrack_ignored_channel.unwrap_or(0);
+
+            // Handle connection to VC
+            if old.is_none() && new.channel_id.is_some() {
+                println!("User connected to voice");
+
+                // Check if new.channel_id isn't ignored channel
+                if new.channel_id.unwrap().get() != ignored_channel_id {
+                    sqlx::query!("UPDATE users SET vctrack_join_time = UNIX_TIMESTAMP() WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                        .execute(&data.database)
+                        .await
+                        .unwrap();
+                }
+            }
+            
+            // Handle disconnection from VC
+            if old.is_some() && new.channel_id.is_none() {
+                println!("User disconnected");
+
+                // Check if user join time is 0
+                let join_time = sqlx::query!("SELECT vctrack_join_time FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                    .fetch_one(&data.database)
+                    .await
+                    .unwrap();
+
+                if join_time.vctrack_join_time == 0 { return Ok(()); }
+                
+                // Check if old.channel_id isn't ignored channel
+                if old.as_ref().unwrap().channel_id.unwrap().get() != ignored_channel_id {
+                    sqlx::query!("UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                        .execute(&data.database)
+                        .await
+                        .unwrap();
+
+                    sqlx::query!("UPDATE users SET vctrack_join_time = 0 WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                        .execute(&data.database)
+                        .await
+                        .unwrap();
+                }
+            }
+
+            // Handle channel movement
+            if old.is_some() && new.channel_id.is_some() {
+                let old_cid = old.as_ref().unwrap().channel_id.unwrap().get();
+                let new_cid = new.channel_id.unwrap().get();
+
+                // Check if new.channel_id is ignored channel
+                // - If so, act as if disconnecting
+                // - If not, act as if connecting
+                if old_cid != new_cid && new_cid == ignored_channel_id {
+                    // Check if user join time is 0
+                    let join_time = sqlx::query!("SELECT vctrack_join_time FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                        .fetch_one(&data.database)
+                        .await
+                        .unwrap();
+
+                    if join_time.vctrack_join_time == 0 { return Ok(()); }
+
+                    sqlx::query!("UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                        .execute(&data.database)
+                        .await
+                        .unwrap();
+
+                    sqlx::query!("UPDATE users SET vctrack_join_time = 0 WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                        .execute(&data.database)
+                        .await
+                        .unwrap();
+
+                    return Ok(());
+                }
+
+                if old_cid != new_cid && old_cid == ignored_channel_id {
+                    sqlx::query!("UPDATE users SET vctrack_join_time = UNIX_TIMESTAMP() WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                        .execute(&data.database)
+                        .await
+                        .unwrap();
+                }
             }
         },
         _ => {}
@@ -286,6 +379,7 @@ async fn main() {
                 mtg::mtg(),
                 stats::stats(),
                 stats::serverstats(),
+                vctracker::vctracker(),
             ],
             pre_command: |ctx| {
                 Box::pin(async move {

@@ -107,7 +107,7 @@ pub fn write_log(log_info: LogType) {
         },
 
         LogType::UserDBRemove => {
-            let msg = format!("[ USER ] User left a server and associated data has been removced.");
+            let msg = format!("[ USER ] User left a server and associated data has been removed.");
             println!("{msg}");
         },
 
