@@ -138,8 +138,6 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
 
             // Handle connection to VC
             if old.is_none() && new.channel_id.is_some() {
-                println!("User connected to voice");
-
                 // Check if new.channel_id isn't ignored channel
                 if new.channel_id.unwrap().get() != ignored_channel_id {
                     sqlx::query!("UPDATE users SET vctrack_join_time = UNIX_TIMESTAMP() WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
@@ -151,8 +149,6 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             
             // Handle disconnection from VC
             if old.is_some() && new.channel_id.is_none() {
-                println!("User disconnected");
-
                 // Check if user join time is 0
                 let join_time = sqlx::query!("SELECT vctrack_join_time FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
                     .fetch_one(&data.database)

@@ -1,7 +1,6 @@
 use crate::{data, Context, Error};
 use crate::data::{user_table_check, User};
 use poise::serenity_prelude as serenity;
-use std::time::Duration;
 
 /// Check user stats
 #[poise::command(

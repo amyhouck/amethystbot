@@ -1,4 +1,4 @@
-use crate::{log, Context, Error};
+use crate::{Context, Error};
 use poise::serenity_prelude as serenity;
 
 #[poise::command(
