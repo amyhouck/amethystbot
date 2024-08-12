@@ -26,6 +26,7 @@ pub async fn user_table_check(database: &sqlx::MySqlPool, guild_id: u64, user_id
 // User structure
 //--------------------------
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct User {
     pub guild_id: u64,
     pub user_id: u64,
