@@ -11,6 +11,7 @@ pub async fn vctracker(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Sets the channel to ignore when tracking time spent in VC.
 #[poise::command(slash_command)]
 pub async fn ignorechannel(
     ctx: Context<'_>,
@@ -34,6 +35,69 @@ pub async fn ignorechannel(
             ctx.say("No longer ignoring any channels for tracking time spent in VC.").await?;
         }
     }
+
+    Ok(())
+}
+
+/// List the top 10 longest times in VC.
+#[poise::command(
+    slash_command,
+    guild_only
+)]
+pub async fn vctop(
+    ctx: Context<'_>
+) -> Result<(), Error> {
+    let guild_id = ctx.guild_id().unwrap().get();
+
+    // Grab and sort list
+    let mut times: Vec<(u64, u32)> = sqlx::query!("SELECT user_id, vctrack_total_time FROM users WHERE guild_id = ?", guild_id)
+        .fetch_all(&ctx.data().database)
+        .await
+        .unwrap()
+        .iter()
+        .map(|r| (r.user_id, r.vctrack_total_time))
+        .collect();
+
+    times.sort_by_key(|k| k.1);
+    times.truncate(10);
+    times.reverse();
+
+    // Build embed
+    let mut embed_desc = String::new();
+
+    for (i, user) in times.iter().enumerate() {
+        // Get username to display
+        let disc_user = serenity::UserId::new(user.0).to_user(ctx.http()).await.unwrap();
+        let user_nick = disc_user.nick_in(ctx.http(), guild_id).await;
+
+        let user_nick = if user_nick.is_some() {
+            user_nick.unwrap()
+        } else if disc_user.global_name.is_some() {
+            disc_user.global_name.as_ref().unwrap().to_string()
+        } else {
+            disc_user.name
+        };
+
+        // Format into embed_desc
+        embed_desc = format!("{embed_desc}**{}.** {} - {}h {}m {}s\n",
+            i + 1,
+            user_nick,
+            (user.1 / 60) / 60,
+            (user.1 / 60) % 60,
+            user.1 % 60,
+        );
+    }
+
+    let mut scoreboard_embed = serenity::CreateEmbed::new()
+        .title("VC Time Leaderboard")
+        .colour(0xcc3842)
+        .description(embed_desc);
+
+    if ctx.guild().unwrap().icon_url().is_some() {
+        scoreboard_embed = scoreboard_embed.thumbnail(ctx.guild().unwrap().icon_url().unwrap());
+    }
+
+    ctx.send(poise::CreateReply::default().embed(scoreboard_embed)).await?;
 
     Ok(())
 }
