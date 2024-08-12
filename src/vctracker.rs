@@ -1,6 +1,7 @@
 use crate::{Context, Error};
 use poise::serenity_prelude as serenity;
 
+/// Settings for the VC time tracker
 #[poise::command(
     slash_command,
     guild_only,
@@ -11,7 +12,6 @@ pub async fn vctracker(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// Sets the channel to ignore when tracking time spent in VC.
 #[poise::command(slash_command)]
 pub async fn ignorechannel(
     ctx: Context<'_>,
@@ -39,7 +39,7 @@ pub async fn ignorechannel(
     Ok(())
 }
 
-/// List the top 10 longest times in VC.
+/// List the top 10 times in VC.
 #[poise::command(
     slash_command,
     guild_only
