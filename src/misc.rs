@@ -14,6 +14,7 @@ pub async fn slap(
     ctx: Context<'_>,
     victim: serenity::User
 ) -> Result<(), Error> {
+    // All hail RNG
     let random_gif = {
         let mut rng = thread_rng();
 
@@ -24,24 +25,16 @@ pub async fn slap(
         }
     };
 
-    let mut embed_msg = if &victim == ctx.author() {
+    let embed_msg = if &victim == ctx.author() {
         String::from("Stop hitting yourself...stop hitting yourself!")
     } else {
         format!("{} slaps you around a bit with a large trout!", ctx.author())
     };
 
-    // Override for a certain someone
-    let mut victim = victim.id.get();
-    if ctx.guild_id().unwrap().get() == 545745915151908865 {
-        let mut rng = thread_rng();
-        let dice_roll = rng.gen_range(1..=5);
+    // Switch to using the victim's ID
+    let victim = victim.id.get();
 
-        if dice_roll == 3 {
-            embed_msg = format!("{} tried to slap <@{}>, but hit <@606613164934692905> instead!", ctx.author(), victim);
-            victim = 606613164934692905;
-        }
-    }
-
+    // Build embed
     let embed = serenity::CreateEmbed::new()
         .description(embed_msg)
         .image(random_gif);
@@ -187,7 +180,7 @@ pub async fn cake(
 
     let glados = {
         let mut rng = thread_rng();
-        rng.gen_range(1..=20)
+        rng.gen_range(1..=15)
     };
 
     // Set message info
