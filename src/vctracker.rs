@@ -48,7 +48,7 @@ pub async fn vctop(
     ctx: Context<'_>
 ) -> Result<(), Error> {
     ctx.defer().await?;
-    
+
     let guild_id = ctx.guild_id().unwrap().get();
 
     // Grab and sort list
@@ -61,8 +61,8 @@ pub async fn vctop(
         .collect();
 
     times.sort_by_key(|k| k.1);
-    times.truncate(10);
     times.reverse();
+    times.truncate(10);
 
     // Build embed
     let mut embed_desc = String::new();
