@@ -18,16 +18,43 @@ pub async fn stats(
         None => ctx.author().clone()
     };
 
-    let user_id = user.id.get();
+    let user_id = user.id;
     let guild_id = ctx.guild_id().unwrap().get();
 
-    user_table_check(&ctx.data().database, guild_id, user_id).await;
-    let user_data = sqlx::query_as!(User, "SELECT * FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+    // Update Voice Time
+    let vc_info = ctx.guild().unwrap().voice_states.clone();
+    let user_voicechannel = &vc_info[&user_id].channel_id;
+    let user_voicechannel = match user_voicechannel {
+        Some(c) => c.get(),
+        None => 0
+    };
+
+    let ignored_channel = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
+        .fetch_one(&ctx.data().database)
+        .await
+        .unwrap()
+        .vctrack_ignored_channel
+        .unwrap_or(0);
+
+    if user_voicechannel != 0 && user_voicechannel != ignored_channel {
+        sqlx::query!("UPDATE users SET vctrack_total_time = (UNIX_TIMESTAMP() - vctrack_join_time) + vctrack_total_time WHERE guild_id = ? AND user_id = ?", guild_id, user_id.get())
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+
+        sqlx::query!("UPDATE users SET vctrack_join_time = UNIX_TIMESTAMP() WHERE guild_id = ? AND user_id = ?", guild_id, user_id.get())
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+    }
+    
+    // Build stats embed
+    user_table_check(&ctx.data().database, guild_id, user_id.get()).await;
+    let user_data = sqlx::query_as!(User, "SELECT * FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id.get())
         .fetch_one(&ctx.data().database)
         .await
         .unwrap();
-    
-    // Build stats embed
+
     let server_nick = user.nick_in(ctx.http(), guild_id).await;
     let title_name = if server_nick.is_some() {
         server_nick.unwrap()
