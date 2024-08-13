@@ -47,6 +47,7 @@ pub async fn ignorechannel(
 pub async fn vctop(
     ctx: Context<'_>
 ) -> Result<(), Error> {
+    ctx.defer().await?;
     let guild_id = ctx.guild_id().unwrap().get();
 
     // Grab and sort list
