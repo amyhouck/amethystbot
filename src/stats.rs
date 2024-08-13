@@ -23,7 +23,12 @@ pub async fn stats(
 
     // Update Voice Time
     let vc_info = ctx.guild().unwrap().voice_states.clone();
-    let user_voicechannel = &vc_info[&user_id].channel_id;
+    let vc_info = vc_info.get(&user_id);
+
+    let user_voicechannel = match vc_info {
+        Some(i) => i.channel_id,
+        None => None
+    };
     let user_voicechannel = match user_voicechannel {
         Some(c) => c.get(),
         None => 0
