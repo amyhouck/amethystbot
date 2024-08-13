@@ -52,17 +52,13 @@ pub async fn vctop(
     let guild_id = ctx.guild_id().unwrap().get();
 
     // Grab and sort list
-    let mut times: Vec<(u64, u32)> = sqlx::query!("SELECT user_id, vctrack_total_time FROM users WHERE guild_id = ?", guild_id)
+    let times: Vec<(u64, u32)> = sqlx::query!("SELECT user_id, vctrack_total_time FROM users WHERE guild_id = ? ORDER BY vctrack_total_time DESC LIMIT 10", guild_id)
         .fetch_all(&ctx.data().database)
         .await
         .unwrap()
         .iter()
         .map(|r| (r.user_id, r.vctrack_total_time))
         .collect();
-
-    times.sort_by_key(|k| k.1);
-    times.reverse();
-    times.truncate(10);
 
     // Build embed
     let mut embed_desc = String::new();
