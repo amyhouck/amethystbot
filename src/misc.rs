@@ -32,32 +32,34 @@ pub async fn slap(
     };
 
     // Switch to using the victim's ID
-    let victim = victim.id.get();
+    let victim_id = victim.id.get();
 
     // Build embed
     let embed = serenity::CreateEmbed::new()
         .description(embed_msg)
         .image(random_gif);
 
-    ctx.send(poise::CreateReply::default().content(format!("<@{}>", victim)).embed(embed)).await?;
+    ctx.send(poise::CreateReply::default().content(format!("<@{}>", victim_id)).embed(embed)).await?;
 
     // Stat handling
     let guild_id = ctx.guild_id().unwrap().get();
     let executioner_id = ctx.author().id.get();
     user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
-    user_table_check(&ctx.data().database, guild_id, victim).await;  // - Check victim's existence
+    user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
 
-    // Update executioner's stats
-    sqlx::query!("UPDATE users SET slap_sent = slap_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+    if ctx.author() != &victim {
+        // Update executioner's stats
+        sqlx::query!("UPDATE users SET slap_sent = slap_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
 
-    // Update victim's stats
-    sqlx::query!("UPDATE users SET slap_received = slap_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+        // Update victim's stats
+        sqlx::query!("UPDATE users SET slap_received = slap_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+    }
 
     Ok(())
 }
@@ -97,17 +99,19 @@ pub async fn cookie(
     user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
     user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
 
-    // Update executioner's stats
-    sqlx::query!("UPDATE users SET cookie_sent = cookie_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+    if ctx.author() != &victim {
+        // Update executioner's stats
+        sqlx::query!("UPDATE users SET cookie_sent = cookie_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
 
-    // Update victim's stats
-    sqlx::query!("UPDATE users SET cookie_received = cookie_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+        // Update victim's stats
+        sqlx::query!("UPDATE users SET cookie_received = cookie_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+    }
 
     Ok(())
 }
@@ -147,17 +151,19 @@ pub async fn tea(
     user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
     user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
 
-    // Update executioner's stats
-    sqlx::query!("UPDATE users SET tea_sent = tea_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+    if ctx.author() != &victim {
+        // Update executioner's stats
+        sqlx::query!("UPDATE users SET tea_sent = tea_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
 
-    // Update victim's stats
-    sqlx::query!("UPDATE users SET tea_received = tea_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+        // Update victim's stats
+        sqlx::query!("UPDATE users SET tea_received = tea_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+    }
 
     Ok(())
 }
@@ -210,22 +216,24 @@ pub async fn cake(
     user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
 
     // Update executioner's stats
-    sqlx::query!("UPDATE users SET cake_sent = cake_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+    if ctx.author() != &victim {
+        sqlx::query!("UPDATE users SET cake_sent = cake_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
 
-    // Update victim's stats
-    if glados == 9 {
-        sqlx::query!("UPDATE users SET cake_glados = cake_glados + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
-    } else {
-        sqlx::query!("UPDATE users SET cake_received = cake_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
+        // Update victim's stats
+        if glados == 9 {
+            sqlx::query!("UPDATE users SET cake_glados = cake_glados + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+                .execute(&ctx.data().database)
+                .await
+                .unwrap();
+        } else {
+            sqlx::query!("UPDATE users SET cake_received = cake_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+                .execute(&ctx.data().database)
+                .await
+                .unwrap();
+        }
     }
 
     Ok(())
