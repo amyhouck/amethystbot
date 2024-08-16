@@ -157,12 +157,11 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                 
                 // Check if old.channel_id isn't ignored channel
                 if old.as_ref().unwrap().channel_id.unwrap().get() != ignored_channel_id {
-                    sqlx::query!("UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
-                        .execute(&data.database)
-                        .await
-                        .unwrap();
+                    let query = format!("
+                        UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
+                        UPDATE users SET vctrack_join_time = 0 WHERE guild_id = {guild_id} AND user_id = {user_id}");
 
-                    sqlx::query!("UPDATE users SET vctrack_join_time = 0 WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                    sqlx::raw_sql(&query)
                         .execute(&data.database)
                         .await
                         .unwrap();
@@ -186,12 +185,11 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
 
                     if join_time.vctrack_join_time == 0 { return Ok(()); }
 
-                    sqlx::query!("UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
-                        .execute(&data.database)
-                        .await
-                        .unwrap();
+                    let query = format!("
+                        UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
+                        UPDATE users SET vctrack_join_time = 0 WHERE guild_id = {guild_id} AND user_id = {user_id}");
 
-                    sqlx::query!("UPDATE users SET vctrack_join_time = 0 WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                    sqlx::raw_sql(&query)
                         .execute(&data.database)
                         .await
                         .unwrap();
