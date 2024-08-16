@@ -48,14 +48,10 @@ pub async fn slap(
     user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
 
     if ctx.author() != &victim {
-        // Update executioner's stats
-        sqlx::query!("UPDATE users SET slap_sent = slap_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
+        let query = format!("UPDATE users SET slap_sent = slap_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
+            UPDATE users SET slap_received = slap_received + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}");
 
-        // Update victim's stats
-        sqlx::query!("UPDATE users SET slap_received = slap_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+        sqlx::raw_sql(&query)
             .execute(&ctx.data().database)
             .await
             .unwrap();
@@ -100,14 +96,10 @@ pub async fn cookie(
     user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
 
     if ctx.author() != &victim {
-        // Update executioner's stats
-        sqlx::query!("UPDATE users SET cookie_sent = cookie_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
+        let query = format!("UPDATE users SET cookie_sent = cookie_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
+            UPDATE users SET cookie_received = cookie_received + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}");
 
-        // Update victim's stats
-        sqlx::query!("UPDATE users SET cookie_received = cookie_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+        sqlx::raw_sql(&query)
             .execute(&ctx.data().database)
             .await
             .unwrap();
@@ -152,14 +144,10 @@ pub async fn tea(
     user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
 
     if ctx.author() != &victim {
-        // Update executioner's stats
-        sqlx::query!("UPDATE users SET tea_sent = tea_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
+        let query = format!("UPDATE users SET tea_sent = tea_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
+            UPDATE users SET tea_received = tea_received + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}");
 
-        // Update victim's stats
-        sqlx::query!("UPDATE users SET tea_received = tea_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
+        sqlx::raw_sql(&query)
             .execute(&ctx.data().database)
             .await
             .unwrap();
@@ -215,25 +203,21 @@ pub async fn cake(
     user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
     user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
 
-    // Update executioner's stats
+    // Update stats
     if ctx.author() != &victim {
-        sqlx::query!("UPDATE users SET cake_sent = cake_sent + 1 WHERE guild_id = ? AND user_id = ?", guild_id, executioner_id)
+        let victim_increment = if glados == 9 {
+            "cake_glados = cake_glados + 1"
+        } else {
+            "cake_received = cake_received + 1"
+        };
+
+        let query = format!("UPDATE users SET cake_sent = cake_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
+            UPDATE users SET {victim_increment} WHERE guild_id = {guild_id} AND user_id = {victim_id}");
+
+        sqlx::raw_sql(&query)
             .execute(&ctx.data().database)
             .await
             .unwrap();
-
-        // Update victim's stats
-        if glados == 9 {
-            sqlx::query!("UPDATE users SET cake_glados = cake_glados + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
-                .execute(&ctx.data().database)
-                .await
-                .unwrap();
-        } else {
-            sqlx::query!("UPDATE users SET cake_received = cake_received + 1 WHERE guild_id = ? AND user_id = ?", guild_id, victim_id)
-                .execute(&ctx.data().database)
-                .await
-                .unwrap();
-        }
     }
 
     Ok(())
