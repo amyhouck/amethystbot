@@ -1,3 +1,7 @@
+mod data;
+mod modules;
+mod commands;
+
 use poise::serenity_prelude as serenity;
 use dotenv::dotenv;
 use chrono::Utc;
@@ -5,15 +9,9 @@ use cron::Schedule;
 use rand::{Rng, thread_rng};
 use std::str::FromStr;
 use std::time::Duration;
+use modules::*;
+use commands::*;
 
-mod birthday;
-mod misc;
-mod welcome;
-mod mtg;
-mod stats;
-mod data;
-mod log;
-mod vctracker;
 
 #[derive(Debug)]
 pub struct Data { // User data, which is stored and accessible in all command invocations
