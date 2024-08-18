@@ -1,6 +1,7 @@
 mod data;
 mod modules;
 mod commands;
+mod events;
 
 use poise::serenity_prelude as serenity;
 use dotenv::dotenv;
@@ -34,37 +35,24 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             birthday_check(ctx, data).await;
         },
 
-        serenity::FullEvent::GuildCreate { guild, .. } => {
+        serenity::FullEvent::GuildCreate { guild, is_new } => {
             let guild_id = guild.id.get();
+            let is_new = is_new.unwrap_or(false);
 
-            // Check guild_settings
-            let count = sqlx::query!("SELECT COUNT(guild_id) AS count FROM guild_settings WHERE guild_id = ?", guild_id)
-                .fetch_one(&data.database)
-                .await
-                .unwrap();
+            // Add guild to settings tables if new to the bot
+            if is_new {
+                let query = format!("
+                    INSERT IGNORE INTO guild_settings (guild_id) VALUES ({guild_id});
+                    INSERT IGNORE INTO welcome (guild_id) VALUES ({guild_id})
+                ");
 
-            if count.count == 0 {
-                sqlx::query!("INSERT INTO guild_settings (guild_id) VALUES (?)", guild_id)
-                    .execute(&data.database)
-                    .await
-                    .unwrap();
-
-                log::write_log(log::LogType::BotGuildDBRegister { guild_id, table_name: String::from("guild_settings") });
-            }
-    
-            // Check welcome table
-            let count = sqlx::query!("SELECT COUNT(guild_id) AS count FROM welcome WHERE guild_id = ?", guild_id)
-                .fetch_one(&data.database)
-                .await
-                .unwrap();
-
-            if count.count == 0 {
-                sqlx::query!("INSERT INTO welcome (guild_id) VALUES (?)", guild_id)
+                sqlx::raw_sql(&query)
                     .execute(&data.database)
                     .await
                     .unwrap();
 
                 log::write_log(log::LogType::BotGuildDBRegister { guild_id, table_name: String::from("welcome") });
+                log::write_log(log::LogType::BotGuildDBRegister { guild_id, table_name: String::from("guild_settings") });
             }
 
             log::write_log(log::LogType::BotGuildLogin { guild_id });
@@ -72,6 +60,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
 
         serenity::FullEvent::GuildMemberAddition { new_member } => {
             let guild_id = new_member.guild_id.get();
+            log::write_log(log::LogType::WelcomeNewUser { guild_id });
 
             // Grab all info and check for channel
             let welcome = sqlx::query!("SELECT * FROM welcome WHERE guild_id = ?", guild_id)
@@ -92,7 +81,6 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             let channel = serenity::ChannelId::new(welcome.channel_id.unwrap());
 
             channel.send_message(&ctx, serenity::CreateMessage::new().embed(welcome_embed)).await.unwrap();
-            log::write_log(log::LogType::WelcomeNewUser { guild_id });
         },
 
         serenity::FullEvent::GuildMemberRemoval { guild_id, user, ..} => {
@@ -100,13 +88,12 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             let user_id = user.id.get();
 
             // Remove user from birthday, users
-            sqlx::query!("DELETE FROM birthday WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
-                .execute(&data.database)
-                .await
-                .unwrap();
+            let query = format!("
+                DELETE FROM birthday WHERE guild_id = {guild_id} AND user_id = {user_id};
+                DELETE FROM users WHERE guild_id = {guild_id} AND user_id = {user_id}
+            ");
 
-
-            sqlx::query!("DELETE FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+            sqlx::raw_sql(&query)
                 .execute(&data.database)
                 .await
                 .unwrap();
@@ -121,88 +108,19 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
         },
 
         serenity::FullEvent::VoiceStateUpdate { old, new } => {
-            // Get needed info
-            let guild_id = new.guild_id.unwrap().get();
-            let user_id = new.user_id.get();
-            
-            data::user_table_check(&data.database, guild_id, user_id).await;
-
-            // Set ignored channel id
-            let ignored_channel_id = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
-                    .fetch_one(&data.database)
-                    .await
-                    .unwrap();
-            let ignored_channel_id = ignored_channel_id.vctrack_ignored_channel.unwrap_or(0);
-
             // Handle connection to VC
             if old.is_none() && new.channel_id.is_some() {
-                // Check if new.channel_id isn't ignored channel
-                if new.channel_id.unwrap().get() != ignored_channel_id {
-                    sqlx::query!("UPDATE users SET vctrack_join_time = UNIX_TIMESTAMP() WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
-                        .execute(&data.database)
-                        .await
-                        .unwrap();
-                }
+                events::on_user_vc_connect(data, old, new).await?;
             }
             
             // Handle disconnection from VC
             if old.is_some() && new.channel_id.is_none() {
-                // Check if user join time is 0
-                let join_time = sqlx::query!("SELECT vctrack_join_time FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
-                    .fetch_one(&data.database)
-                    .await
-                    .unwrap();
-
-                if join_time.vctrack_join_time == 0 { return Ok(()); }
-                
-                // Check if old.channel_id isn't ignored channel
-                if old.as_ref().unwrap().channel_id.unwrap().get() != ignored_channel_id {
-                    let query = format!("
-                        UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
-                        UPDATE users SET vctrack_join_time = 0 WHERE guild_id = {guild_id} AND user_id = {user_id}");
-
-                    sqlx::raw_sql(&query)
-                        .execute(&data.database)
-                        .await
-                        .unwrap();
-                }
+                events::on_user_vc_disconnect(data, old, new).await?;
             }
 
             // Handle channel movement
             if old.is_some() && new.channel_id.is_some() {
-                let old_cid = old.as_ref().unwrap().channel_id.unwrap().get();
-                let new_cid = new.channel_id.unwrap().get();
-
-                // Check if new.channel_id is ignored channel
-                // - If so, act as if disconnecting
-                // - If not, act as if connecting
-                if old_cid != new_cid && new_cid == ignored_channel_id {
-                    // Check if user join time is 0
-                    let join_time = sqlx::query!("SELECT vctrack_join_time FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
-                        .fetch_one(&data.database)
-                        .await
-                        .unwrap();
-
-                    if join_time.vctrack_join_time == 0 { return Ok(()); }
-
-                    let query = format!("
-                        UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
-                        UPDATE users SET vctrack_join_time = 0 WHERE guild_id = {guild_id} AND user_id = {user_id}");
-
-                    sqlx::raw_sql(&query)
-                        .execute(&data.database)
-                        .await
-                        .unwrap();
-
-                    return Ok(());
-                }
-
-                if old_cid != new_cid && old_cid == ignored_channel_id {
-                    sqlx::query!("UPDATE users SET vctrack_join_time = UNIX_TIMESTAMP() WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
-                        .execute(&data.database)
-                        .await
-                        .unwrap();
-                }
+                events::on_user_vc_move(data, old, new).await?;
             }
         },
         _ => {}
