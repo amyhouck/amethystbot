@@ -50,6 +50,14 @@ pub async fn vctop(
     ctx.defer().await?;
     let guild_id = ctx.guild_id().unwrap().get();
 
+    let ctx_voice_states = ctx.guild().unwrap().voice_states.clone();
+    let mut voice_states: Vec<serenity::VoiceState> = Vec::new();
+
+    for (_, v) in ctx_voice_states {
+        voice_states.push(v);
+    }
+    recheck_times(voice_states, &ctx.data().database).await;
+
     // Grab and sort list
     let times: Vec<(u64, u32)> = sqlx::query!("SELECT user_id, vctrack_total_time FROM users WHERE guild_id = ? ORDER BY vctrack_total_time DESC LIMIT 10", guild_id)
         .fetch_all(&ctx.data().database)
@@ -97,4 +105,36 @@ pub async fn vctop(
     ctx.send(poise::CreateReply::default().embed(scoreboard_embed)).await?;
 
     Ok(())
+}
+
+// Recheck VC participant times
+pub async fn recheck_times(
+    voice_states: Vec<serenity::VoiceState>,
+    database: &sqlx::MySqlPool
+) {
+    for user in voice_states {
+        // Grab necessary info
+        let user_id = user.user_id.get();
+        let guild_id = user.guild_id.unwrap().get();
+        let channel_id = user.channel_id.unwrap().get();
+        let ignored_channel = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
+            .fetch_one(database)
+            .await
+            .unwrap()
+            .vctrack_ignored_channel
+            .unwrap_or(0);
+
+        // If channel_id isn't ignored, update times
+        if channel_id != ignored_channel {
+            let query = format!("
+                UPDATE users SET vctrack_total_time = (UNIX_TIMESTAMP() - vctrack_join_time) + vctrack_total_time WHERE guild_id = {guild_id} AND user_id = {user_id};
+                UPDATE users SET vctrack_join_time = UNIX_TIMESTAMP() WHERE guild_id = {guild_id} AND user_id = {user_id}
+            ");
+
+            sqlx::raw_sql(&query)
+                .execute(database)
+                .await
+                .unwrap();
+        }
+    }
 }
