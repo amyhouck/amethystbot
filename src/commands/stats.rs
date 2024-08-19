@@ -1,3 +1,4 @@
+use crate::vctracker::recheck_times;
 use crate::{data, Context, Error};
 use crate::data::{user_table_check, User};
 use poise::serenity_prelude as serenity;
@@ -25,32 +26,8 @@ pub async fn stats(
     let vc_info = ctx.guild().unwrap().voice_states.clone();
     let vc_info = vc_info.get(&user_id);
 
-    let user_voicechannel = match vc_info {
-        Some(i) => i.channel_id,
-        None => None
-    };
-    let user_voicechannel = match user_voicechannel {
-        Some(c) => c.get(),
-        None => 0
-    };
-
-    let ignored_channel = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
-        .fetch_one(&ctx.data().database)
-        .await
-        .unwrap()
-        .vctrack_ignored_channel
-        .unwrap_or(0);
-
-    if user_voicechannel != 0 && user_voicechannel != ignored_channel {
-        sqlx::query!("UPDATE users SET vctrack_total_time = (UNIX_TIMESTAMP() - vctrack_join_time) + vctrack_total_time WHERE guild_id = ? AND user_id = ?", guild_id, user_id.get())
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
-
-        sqlx::query!("UPDATE users SET vctrack_join_time = UNIX_TIMESTAMP() WHERE guild_id = ? AND user_id = ?", guild_id, user_id.get())
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
+    if vc_info.is_some() {
+        recheck_times(vec![vc_info.unwrap().clone()], &ctx.data().database).await;
     }
     
     // Build stats embed
