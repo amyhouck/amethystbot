@@ -1,4 +1,3 @@
-use crate::vctracker::recheck_times;
 use crate::{data, Context, Error};
 use crate::data::{user_table_check, User};
 use poise::serenity_prelude as serenity;
@@ -27,7 +26,7 @@ pub async fn stats(
     let vc_info = vc_info.get(&user_id);
 
     if vc_info.is_some() {
-        recheck_times(vec![vc_info.unwrap().clone()], &ctx.data().database).await;
+        crate::vctracker::recheck_times(vec![vc_info.unwrap().clone()], &ctx.data().database).await;
     }
     
     // Build stats embed

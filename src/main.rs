@@ -12,6 +12,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use modules::*;
 use commands::*;
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT};
 
 
 #[derive(Debug)]
@@ -257,8 +258,13 @@ async fn main() {
     let intents = serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::GUILD_MEMBERS | serenity::GatewayIntents::GUILD_MESSAGES | serenity::GatewayIntents::MESSAGE_CONTENT | serenity::GatewayIntents::GUILD_VOICE_STATES;
 
     // Bulid Client
+    let mut headers = HeaderMap::new();
+    headers.insert(USER_AGENT, HeaderValue::from_static("AmethystBot/1.0"));
+    headers.insert(ACCEPT, HeaderValue::from_static("*/*"));
+
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(30))
+        .default_headers(headers)
         .build()
         .unwrap();
 

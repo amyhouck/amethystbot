@@ -174,7 +174,7 @@ pub async fn cake(
 
     let glados = {
         let mut rng = thread_rng();
-        rng.gen_range(1..=15)
+        rng.gen_range(1..=13)
     };
 
     // Set message info
