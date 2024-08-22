@@ -25,14 +25,24 @@ pub async fn slap(
         }
     };
 
-    let embed_msg = if &victim == ctx.author() {
+    let mut embed_msg = if &victim == ctx.author() {
         String::from("Stop hitting yourself...stop hitting yourself!")
     } else {
         format!("{} slaps you around a bit with a large trout!", ctx.author())
     };
 
     // Switch to using the victim's ID
-    let victim_id = victim.id.get();
+    let mut victim_id = victim.id.get();
+
+    let funny = {
+        let mut rng = thread_rng();
+        rng.gen_range(1..=5)
+    };
+
+    if ctx.guild_id().unwrap().get() == 545745915151908865 && funny == 3 {
+        victim_id = 811402226643632159;
+        embed_msg = format!("{} tried to slap {} but hit <@{}> instead!", ctx.author(), victim, victim_id);
+    }
 
     // Build embed
     let embed = serenity::CreateEmbed::new()
