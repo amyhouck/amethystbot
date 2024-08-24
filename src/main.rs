@@ -225,6 +225,7 @@ async fn main() {
 
     let database_url = std::env::var("DATABASE_URL").expect("missing DATABASE_URL");
     let database = sqlx::mysql::MySqlPool::connect(&database_url).await.unwrap();
+    sqlx::migrate!("./migrations").run(&database).await.unwrap();
 
     // * CUSTOM DATA
     let birthday_gifs: Vec<String> = vec![
