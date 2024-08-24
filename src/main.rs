@@ -1,6 +1,5 @@
 mod data;
 mod modules;
-mod commands;
 mod events;
 
 use poise::serenity_prelude as serenity;
@@ -11,7 +10,6 @@ use rand::{Rng, thread_rng};
 use std::str::FromStr;
 use std::time::Duration;
 use modules::*;
-use commands::*;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT};
 
 
