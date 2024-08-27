@@ -99,6 +99,7 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
     }
 
     let mut server_stats = data::ServerStats::default();
+    let mut raw_vc_time = 0u32;
     for record in server_data {
         server_stats.bomb_defused += record.bomb_defused;
         server_stats.bomb_failed += record.bomb_failed;
@@ -108,10 +109,18 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
         server_stats.tea_sent += record.tea_sent;
         server_stats.slap_sent += record.slap_sent;
         server_stats.glados_appearances += record.cake_glados;
+        raw_vc_time += record.vctrack_total_time;
     }
 
+    let formatted_vc_time = format!("{}d {}h {}m {}s",
+        ((raw_vc_time / 60) / 60) / 24,
+        (raw_vc_time / 60) % 24,
+        (raw_vc_time / 60) % 60,
+        raw_vc_time % 60
+    );
+
     // Build and send stats embed
-    let embed_desc = format!("**Cookies sent:** {0}\n**Cakes sent:** {1}\n**Tea sent:** {2}\n**Slaps sent:** {3}\n**GLaDOS appearances:** {7}\n\n**Bombs sent:** {4}\n**Bombs defused:** {5}\n**Bombs exploded:** {6}",
+    let embed_desc = format!("**Total VC time:** {8}\n\n**Cookies sent:** {0}\n**Cakes sent:** {1}\n**Tea sent:** {2}\n**Slaps sent:** {3}\n**GLaDOS appearances:** {7}\n\n**Bombs sent:** {4}\n**Bombs defused:** {5}\n**Bombs exploded:** {6}",
         server_stats.cookie_sent,
         server_stats.cake_sent,
         server_stats.tea_sent,
@@ -120,6 +129,7 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
         server_stats.bomb_defused,
         server_stats.bomb_failed,
         server_stats.glados_appearances,
+        formatted_vc_time
     );
 
     let mut embed = serenity::CreateEmbed::new()
