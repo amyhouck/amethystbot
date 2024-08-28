@@ -114,7 +114,7 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
 
     let formatted_vc_time = format!("{}d {}h {}m {}s",
         ((raw_vc_time / 60) / 60) / 24,
-        (raw_vc_time / 60) % 24,
+        ((raw_vc_time / 60) / 60) % 24,
         (raw_vc_time / 60) % 60,
         raw_vc_time % 60
     );
