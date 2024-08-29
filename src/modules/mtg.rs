@@ -51,9 +51,10 @@ struct ScryfallMTGCardFace {
 }
 
 //--------------------
-// Function library
+// Embed creation
 //--------------------
 
+// Create an embed for a double-faced card
 fn create_double_face_embed(scryfall: ScryfallMTGCard) -> Vec<serenity::CreateEmbed> {
     // Create and populate embed vector
     let scryfall_faces = scryfall.card_faces.unwrap();
@@ -99,17 +100,7 @@ fn create_double_face_embed(scryfall: ScryfallMTGCard) -> Vec<serenity::CreateEm
             .url(scryfall.scryfall_uri.clone())
             .description(embed_desc);
 
-        if scryfall_faces[i].power.is_some() {
-            card_embed = card_embed.field("Power:", scryfall_faces[i].power.as_ref().unwrap(), true);
-        }
-    
-        if scryfall_faces[i].toughness.is_some() {
-            card_embed = card_embed.field("Toughness:", scryfall_faces[i].toughness.as_ref().unwrap(), true);
-        }
-
-        if scryfall_faces[i].loyalty.is_some() {
-            card_embed = card_embed.field("Loyalty:", scryfall_faces[i].loyalty.as_ref().unwrap(), true);
-        }
+        card_embed = add_fields(&scryfall_faces[i].power, &scryfall_faces[i].toughness, &scryfall_faces[i].loyalty, card_embed);
     
         if scryfall.image_status.as_str() != "missing" {
             let image_url = if scryfall.image_uris.is_none() {
@@ -127,6 +118,7 @@ fn create_double_face_embed(scryfall: ScryfallMTGCard) -> Vec<serenity::CreateEm
     card_faces
 }
 
+// Create the embed for a single-face card
 fn create_single_face_embed(scryfall: ScryfallMTGCard) -> serenity::CreateEmbed {
     let cost = match scryfall.mana_cost {
         Some(mut mana_cost) => {
@@ -175,18 +167,7 @@ fn create_single_face_embed(scryfall: ScryfallMTGCard) -> serenity::CreateEmbed 
         .url(scryfall.scryfall_uri)
         .description(embed_desc);
 
-    // Alter embedd based on available information
-    if scryfall.power.is_some() {
-        card_embed = card_embed.field("Power:", scryfall.power.unwrap(), true);
-    }
-
-    if scryfall.toughness.is_some() {
-        card_embed = card_embed.field("Toughness:", scryfall.toughness.unwrap(), true);
-    }
-
-    if scryfall.loyalty.is_some() {
-        card_embed = card_embed.field("Loyalty:", scryfall.loyalty.unwrap(), true);
-    }
+    card_embed = add_fields(&scryfall.power, &scryfall.toughness, &scryfall.loyalty, card_embed);
 
     if scryfall.image_status.as_str() != "missing" {
         card_embed = card_embed.image(scryfall.image_uris.unwrap()["border_crop"].as_str().unwrap_or(""));
@@ -195,6 +176,53 @@ fn create_single_face_embed(scryfall: ScryfallMTGCard) -> serenity::CreateEmbed 
     card_embed
 }
 
+fn create_legalities_embed(scryfall: ScryfallMTGCard) -> serenity::CreateEmbed {
+    let mut format_list = String::new();
+    for (i, format) in scryfall.legalities.iter().enumerate() {
+        format_list = format!("{format_list}**{}:** {}\n",
+            beautify_format(format.0.to_string()),
+            format.1.replace("not_legal", ":x:").replace("legal", ":white_check_mark:").replace("banned", ":prohibited:").replace("restricted", ":grey_exclamation:")
+        );
+
+        if (i + 1) % 11 == 0 {
+            format_list = format!("{format_list}\n");
+        }
+    }
+
+    let legal_desc = format!("**Key:**\n:white_check_mark: - *Legal*\n:x: - *Not Legal*\n:prohibited: - *Banned*\n:grey_exclamation: - *Restricted*\n\n{format_list}");
+
+    serenity::CreateEmbed::new()
+        .title(scryfall.name)
+        .url(scryfall.scryfall_uri)
+        .description(legal_desc)
+}
+
+fn add_fields(
+    power: &Option<String>,
+    toughness: &Option<String>,
+    loyalty: &Option<String>,
+    mut card_embed: serenity::CreateEmbed
+) -> serenity::CreateEmbed {
+    if power.is_some() {
+        card_embed = card_embed.field("Power:", power.as_ref().unwrap(), true);
+    }
+
+    if toughness.is_some() {
+        card_embed = card_embed.field("Toughness:", toughness.as_ref().unwrap(), true);
+    }
+
+    if loyalty.is_some() {
+        card_embed = card_embed.field("Loyalty:", loyalty.as_ref().unwrap(), true);
+    }
+
+    card_embed
+}
+
+//--------------------
+// Function Library
+//--------------------
+
+// Format strings in formats
 fn beautify_format(mut format: String) -> String {
     format = format.replace("paupercommander", "Pauper Commander");
     format = format.replace("standardbrawl", "Standard Brawl");
@@ -204,6 +232,53 @@ fn beautify_format(mut format: String) -> String {
         Some(c) => c.to_uppercase().chain(f_chars).collect(),
         None => String::new()
     }
+}
+
+// Validate parameters in command
+fn valid_parameters(
+    name: &Option<String>,
+    set: &Option<String>,
+    collector_num: &Option<i64>
+) -> Result<(), Error> {
+    if name.is_none() && set.is_none() && collector_num.is_none() {
+        return Err("You must include at least the name parameter!".into());
+    }
+
+    if set.is_some() && name.is_none() && collector_num.is_none() {
+        return Err("You must include the name of the card or the collector number!".into());
+    }
+
+    if collector_num.is_some() && set.is_none() {
+        return Err("You must include the set code when specifying a collector number!".into());
+    }
+
+    Ok(())
+}
+
+// Query Scryfall API
+async fn scryfall_query(
+    client: &reqwest::Client,
+    api_url: String
+) -> Result<Value, Error> {
+    let scryfall = client.get(api_url)
+        .send()
+        .await;
+
+    let scryfall = match scryfall {
+        Ok(data) => data.json::<serde_json::Value>().await.unwrap(),
+        Err(err) => {
+            log::write_log(log::LogType::MTGScryfallParsingError { error: err.to_string() });
+            return Err("There was an error processing your request!".into());
+        }
+    };
+
+    // Handle errors
+    if scryfall["object"].as_str().unwrap() == "error" {
+        log::write_log(log::LogType::MTGScryfallError { error: scryfall["details"].as_str().unwrap().to_string() });
+        return Err(format!("{}", scryfall["details"].as_str().unwrap()).into());
+    }
+
+    Ok(scryfall)
 }
 
 //--------------------
@@ -227,16 +302,9 @@ pub async fn card(
     #[max_length = 4] collector_num: Option<i64>,
 ) -> Result<(), Error> {
     // Validate paramters
-    if name.is_none() && set.is_none() && collector_num.is_none() {
-        return Err("You must include at least the name parameter!".into());
-    }
-
-    if set.is_some() && name.is_none() && collector_num.is_none() {
-        return Err("You must include the name of the card or the collector number!".into());
-    }
-
-    if collector_num.is_some() && set.is_none() {
-        return Err("You must include the set code when specifying a collector number!".into());
+    match valid_parameters(&name, &set, &collector_num) {
+        Err(e) => return Err(e),
+        _ => {}
     }
 
     let set = set.unwrap_or(String::new()).to_lowercase();
@@ -248,26 +316,12 @@ pub async fn card(
         format!("https://api.scryfall.com/cards/named?fuzzy={}&set={}", name.unwrap(), set)
     };
 
-    let scryfall = ctx.data().client.get(api_url)
-        .send()
-        .await;
-
-    let scryfall = match scryfall {
-        Ok(data) => data.json::<serde_json::Value>().await.unwrap(),
-        Err(err) => {
-            log::write_log(log::LogType::MTGScryfallParsingError { error: err.to_string() });
-            return Err("There was an error processing your request!".into());
-        }
+    let scryfall = match scryfall_query(&ctx.data().client, api_url).await {
+        Ok(v) => v,
+        Err(e) => return Err(e)
     };
 
-    // Handle errors
-    if scryfall["object"].as_str().unwrap() == "error" {
-        log::write_log(log::LogType::MTGScryfallError { error: scryfall["details"].as_str().unwrap().to_string() });
-        return Err(format!("{}", scryfall["details"].as_str().unwrap()).into());
-    }
-
     // Create Embeds
-    //- Primary embeds
     let scryfall: ScryfallMTGCard = serde_json::from_value(scryfall).unwrap();
 
     let card_embed: Vec<serenity::CreateEmbed> = if scryfall.card_faces.is_some() {
@@ -276,25 +330,7 @@ pub async fn card(
         vec![create_single_face_embed(scryfall.clone())]
     };
 
-    //- Card legalities
-    let mut format_list = String::new();
-    for (i, format) in scryfall.legalities.iter().enumerate() {
-        format_list = format!("{format_list}**{}:** {}\n",
-            beautify_format(format.0.to_string()),
-            format.1.replace("not_legal", ":x:").replace("legal", ":white_check_mark:").replace("banned", ":prohibited:").replace("restricted", ":grey_exclamation:")
-        );
-
-        if (i + 1) % 11 == 0 {
-            format_list = format!("{format_list}\n");
-        }
-    }
-
-    let legal_desc = format!("**Key:**\n:white_check_mark: - *Legal*\n:x: - *Not Legal*\n:prohibited: - *Banned*\n:grey_exclamation: - *Restricted*\n\n{format_list}");
-
-    let legalities_embed = serenity::CreateEmbed::new()
-        .title(scryfall.name)
-        .url(scryfall.scryfall_uri)
-        .description(legal_desc);
+    let legalities_embed = create_legalities_embed(scryfall.clone());
 
     // Create button row
     let mut face_index = 0;
