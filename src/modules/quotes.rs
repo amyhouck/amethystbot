@@ -51,6 +51,39 @@ async fn build_single_quote_embed(ctx: Context<'_>, quote: Quote) -> serenity::C
         .footer(footer)
 }
 
+// Check if the quote command requires a role and determine if the command can be used
+async fn quote_role_check(ctx: Context<'_>) -> Result<bool, Error> {
+    let guild_id = ctx.guild_id().unwrap().get();
+    let role_id = sqlx::query!("SELECT quotes_required_role FROM guild_settings WHERE guild_id = ?", guild_id)
+        .fetch_one(&ctx.data().database)
+        .await
+        .unwrap()
+        .quotes_required_role;
+
+    if role_id.is_none() {
+        return Ok(true);
+    }
+
+    let role_id = serenity::RoleId::new(role_id.unwrap());
+    let guild_roles = ctx.guild_id().unwrap().roles(&ctx.http()).await.unwrap();
+    let role = match guild_roles.get(&role_id) {
+        Some(r) => r,
+        None => return Err("A role is set to be required for this command, but it doesn't exist!".into())
+    };
+
+    if !ctx.author().has_role(ctx.http(), guild_id, role_id).await.unwrap() {
+        ctx.send(
+    poise::CreateReply::default()
+                .content(format!("You must have the '{}' role to run this command!", role.name))
+                .ephemeral(true)
+        ).await?;
+
+        return Ok(false);
+    }
+
+    Ok(true)
+}
+
 
 //--------------------
 // Commands
@@ -60,6 +93,7 @@ async fn build_single_quote_embed(ctx: Context<'_>, quote: Quote) -> serenity::C
     slash_command,
     guild_only,
     member_cooldown = 5,
+    check = "quote_role_check",
 )]
 pub async fn addquote(
     ctx: Context<'_>,
@@ -151,7 +185,8 @@ pub async fn quote(
 #[poise::command(
     slash_command,
     guild_only,
-    member_cooldown = 5
+    member_cooldown = 5,
+    check = "quote_role_check",
 )]
 pub async fn delquote(
     ctx: Context<'_>,
@@ -182,6 +217,41 @@ pub async fn delquote(
             ctx.say("There was an error trying to delete the quote!").await.unwrap()
         }
     };
+
+    Ok(())
+}
+
+/// Set/unset a role required to modify quotes
+#[poise::command(
+    slash_command,
+    guild_only,
+    member_cooldown = 5,
+    required_permissions = "MANAGE_CHANNELS"
+)]
+pub async fn setquoterole(
+    ctx: Context<'_>,
+    role: Option<serenity::Role>
+) -> Result<(), Error> {
+    let guild_id = ctx.guild_id().unwrap().get();
+
+    if role.is_none() { // Remove role requirement
+        sqlx::query!("UPDATE guild_settings SET quotes_required_role = NULL WHERE guild_id = ?", guild_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+
+        ctx.say("No longer requiring a role to modify quotes!").await?;
+    } else { // Add/modify role requirement
+        let role_id = role.as_ref().unwrap().id.get();
+        let role_name = role.unwrap().name;
+
+        sqlx::query!("UPDATE guild_settings SET quotes_required_role = ? WHERE guild_id = ?", role_id, guild_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+
+        ctx.say(format!("Now requiring the {role_name} role to modify quotes!")).await?;
+    }
 
     Ok(())
 }

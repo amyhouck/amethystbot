@@ -299,6 +299,7 @@ async fn main() {
                 quotes::addquote(),
                 quotes::quote(),
                 quotes::delquote(),
+                quotes::setquoterole(),
             ],
             pre_command: |ctx| {
                 Box::pin(async move {
