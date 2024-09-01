@@ -296,6 +296,9 @@ async fn main() {
                 stats::serverstats(),
                 vctracker::vctracker(),
                 vctracker::vctop(),
+                quotes::addquote(),
+                quotes::quote(),
+                quotes::delquote(),
             ],
             pre_command: |ctx| {
                 Box::pin(async move {
