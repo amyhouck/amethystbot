@@ -99,9 +99,18 @@ pub async fn addquote(
     ctx: Context<'_>,
     sayer: serenity::User,
     #[max_length = 500] quote: String,
+    date: Option<String>
 ) -> Result<(), Error> {
     // Build quote then insert
-    let timestamp = chrono::Utc::now().date_naive();
+    let timestamp = if date.is_some() {
+        match chrono::NaiveDate::parse_from_str(&date.unwrap(), "%F") {
+            Ok(d) => d,
+            Err(_) => return Err("You must formt the date with YYYY-MM-DD!".into())
+        }
+    } else {
+        chrono::Utc::now().date_naive()
+    };
+
     let mut quote_data = Quote {
         guild_id: ctx.guild_id().unwrap().get(),
         adder_id: ctx.author().id.get(),
