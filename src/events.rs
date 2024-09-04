@@ -2,7 +2,7 @@
 
 use poise::serenity_prelude as serenity;
 use serenity::VoiceState;
-use crate::{Data, Error};
+use crate::{log, Data, Error};
 
 // "Custom" Event Calls
 
@@ -56,7 +56,10 @@ pub async fn on_user_vc_disconnect(data: &Data, old: &Option<VoiceState>, new: &
         .await
         .unwrap();
 
-    if join_time.vctrack_join_time == 0 { return Ok(()); }
+    if join_time.vctrack_join_time == 0 {
+        log::write_log(log::LogType::VCTrackerSafeguardSkip { guild_id, user_id });
+        return Ok(());
+    }
 
     // Check if old.channel_id isn't ignored channel
     if old.as_ref().unwrap().channel_id.unwrap().get() != ignored_channel_id {
@@ -102,7 +105,10 @@ pub async fn on_user_vc_move(data: &Data, old: &Option<VoiceState>, new: &VoiceS
             .await
             .unwrap();
 
-        if join_time.vctrack_join_time == 0 { return Ok(()); }
+        if join_time.vctrack_join_time == 0 {
+            log::write_log(log::LogType::VCTrackerSafeguardSkip { guild_id, user_id });
+            return Ok(());
+        }
 
         let query = format!("
             UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = {guild_id} AND user_id = {user_id};

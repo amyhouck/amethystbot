@@ -14,7 +14,6 @@ pub enum LogType<'a> {
 
     // Bot Logging
     BotGuildLogin { guild_id: u64 },
-    // BotGuildJoin { guild_id: u64 },
     BotGuildDBRegister { guild_id: u64, table_name: String },
     BotStartup,
 
@@ -28,6 +27,10 @@ pub enum LogType<'a> {
     // MTG Module Logging
     MTGScryfallError { error: String },
     MTGScryfallParsingError { error: String },
+
+    // VCTracker Module
+    VCTrackerSafeguardAdjustment { guild_id: u64, user_id: u64 },
+    VCTrackerSafeguardSkip { guild_id: u64, user_id: u64},
 }
 
 // Logging function
@@ -85,11 +88,6 @@ pub fn write_log(log_info: LogType) {
             println!("{msg}");
         },
 
-        // LogType::BotGuildJoin { guild_id } => {
-        //     let msg = format!("[ BOT ] Joined new guild - Guild ID: {guild_id}");
-        //     println!("{msg}");
-        // },
-
         LogType::BotGuildDBRegister { guild_id, table_name} => {
             let msg = format!("[ BOT ] Registering new guild into table \"{table_name}\" - Guild ID: {guild_id}");
             println!("{msg}");
@@ -125,6 +123,17 @@ pub fn write_log(log_info: LogType) {
 
         LogType::MTGScryfallParsingError { error } => {
             let msg = format!("[ MTG ] An error occurred trying to parse the Scryfall data: {error}");
+            println!("{msg}");
+        }
+
+        // VCTracker Module
+        LogType::VCTrackerSafeguardAdjustment { guild_id, user_id } => {
+            let msg = format!("[ VCTracker ] SAFEGUARD - Adjusted time for User ID ({user_id}) - Guild ID: {guild_id}");
+            println!("{msg}");
+        }
+
+        LogType::VCTrackerSafeguardSkip { guild_id, user_id } => {
+            let msg = format!("[ VCTracker ] SAFEGUARD - Skipping user's time update. Guild ID: {guild_id} - User ID: {user_id}");
             println!("{msg}");
         }
     }

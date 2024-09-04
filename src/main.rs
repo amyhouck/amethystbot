@@ -71,6 +71,8 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                             .execute(&data.database)
                             .await
                             .unwrap();
+
+                        log::write_log(log::LogType::VCTrackerSafeguardAdjustment { guild_id, user_id: user.user_id });
                     }
                 }
             }

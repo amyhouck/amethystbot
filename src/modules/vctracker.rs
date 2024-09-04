@@ -1,4 +1,4 @@
-use crate::{Context, Error};
+use crate::{log, Context, Error};
 use poise::serenity_prelude as serenity;
 
 /// Settings for the VC time tracker
@@ -133,7 +133,10 @@ pub async fn recheck_times(
                 .unwrap()
                 .vctrack_join_time;
 
-            if join_time == 0 { continue; }
+            if join_time == 0 {
+                log::write_log(log::LogType::VCTrackerSafeguardSkip { guild_id, user_id });
+                continue;
+            }
 
             // Update users time
             let query = format!("
