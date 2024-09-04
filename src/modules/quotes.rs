@@ -84,6 +84,44 @@ async fn quote_role_check(ctx: Context<'_>) -> Result<bool, Error> {
     Ok(true)
 }
 
+async fn split_quotes_into_pages(ctx: Context<'_>, guild_quotes: Vec<Quote>) -> Vec<String> {
+    let mut page_content = String::new();
+    let mut pages: Vec<String> = Vec::new();
+    for (i, quote) in guild_quotes.iter().enumerate() {
+        // Get good displayname from sayer_id, then add to page_content
+        let sayer = serenity::UserId::new(quote.sayer_id).to_user(ctx.http()).await.unwrap();
+        let server_nick = sayer.nick_in(ctx.http(), quote.guild_id).await;
+        let sayer_name = if server_nick.is_some() {
+            server_nick.unwrap()
+        } else if sayer.global_name.is_some() {
+            sayer.global_name.as_ref().unwrap().to_string()
+        } else {
+            String::from(&sayer.name)
+        };
+
+        page_content = format!("{page_content}**{}.** \"{}\" \n*\\- {} {}* (ID: {})\n\n",
+            i + 1,
+            quote.quote,
+            sayer_name,
+            quote.timestamp,
+            quote.quote_id,
+        );
+
+        // Split content into more pages as necessary
+        if i + 1 == guild_quotes.len() {
+            pages.push(page_content);
+            break;
+        }
+
+        if (i + 1) % 5 == 0 {
+            pages.push(page_content);
+            page_content = String::new();
+        }
+    }
+
+    pages
+}
+
 
 //--------------------
 // Commands
@@ -260,6 +298,78 @@ pub async fn setquoterole(
             .unwrap();
 
         ctx.say(format!("Now requiring the {role_name} role to modify quotes!")).await?;
+    }
+
+    Ok(())
+}
+
+/// List quotes in a server. Up to 10 on each page.
+#[poise::command(
+    slash_command,
+    guild_only,
+    member_cooldown = 5,
+)]
+pub async fn listquotes(
+    ctx: Context<'_>,
+) -> Result<(), Error> {
+    ctx.defer().await?;
+
+    // Grab sorted guild quotes into vector
+    let guild_id = ctx.guild_id().unwrap().get();
+
+    let guild_quotes: Vec<Quote> = sqlx::query_as!(Quote, "SELECT * FROM quotes WHERE guild_id = ? ORDER BY quote_id", guild_id)
+        .fetch_all(&ctx.data().database)
+        .await
+        .unwrap();
+
+    // Create initial embed
+    let pages = split_quotes_into_pages(ctx, guild_quotes).await;
+    let mut page_num = 0;
+    let ctx_id = ctx.id();
+    let prev_id = format!("{ctx_id}prev");
+    let next_id = format!("{ctx_id}next");
+
+    let buttons: Vec<serenity::CreateButton> = vec![
+        serenity::CreateButton::new(&prev_id).label("Previous"),
+        serenity::CreateButton::new(&next_id).label("Next")
+    ];
+    let buttons = serenity::CreateActionRow::Buttons(buttons);
+
+    let embed = serenity::CreateEmbed::new()
+        .description(&pages[page_num])
+        .colour(0x0b4a6f)
+        .title("Quotes");
+
+    ctx.send(poise::CreateReply::default()
+        .embed(embed)
+        .components(vec![buttons])
+    ).await?;
+
+    // Handle button interactions
+    while let Some(press) = serenity::collector::ComponentInteractionCollector::new(ctx)
+        .filter(move |press| press.data.custom_id.starts_with(&ctx_id.to_string()))
+        .timeout(std::time::Duration::from_secs(1800))
+        .await {
+            if press.data.custom_id == prev_id {
+                page_num = page_num.checked_sub(1).unwrap_or(pages.len() - 1)
+            } else if press.data.custom_id == next_id {
+                page_num += 1;
+                if page_num >= pages.len() { page_num = 0; }
+            } else {
+                continue;
+            }
+
+            press.create_response(
+                ctx.serenity_context(),
+                serenity::CreateInteractionResponse::UpdateMessage(
+                    serenity::CreateInteractionResponseMessage::new()
+                        .embed(serenity::CreateEmbed::new()
+                            .description(&pages[page_num])
+                            .colour(0x0b4a6f)
+                            .title("Quotes")
+                        )
+                )
+            ).await?;
     }
 
     Ok(())
