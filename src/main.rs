@@ -55,6 +55,25 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             }
 
             log::write_log(log::LogType::BotGuildLogin { guild_id });
+
+            // VC tracking safeguard for disconnect users
+            let guild_voice_states = guild.voice_states.clone();
+            let user_join_times = sqlx::query!("SELECT user_id, vctrack_join_time FROM users WHERE guild_id = ? AND vctrack_join_time != 0", guild_id)
+                .fetch_all(&data.database)
+                .await
+                .unwrap();
+
+            for user in user_join_times {
+                match guild_voice_states.get(&serenity::UserId::new(user.user_id)) {
+                    Some(_) => continue,
+                    None => {
+                        sqlx::query!("UPDATE users SET vctrack_join_time = 0 WHERE guild_id = ? AND user_id = ?", guild_id, user.user_id)
+                            .execute(&data.database)
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
         },
 
         serenity::FullEvent::GuildMemberAddition { new_member } => {

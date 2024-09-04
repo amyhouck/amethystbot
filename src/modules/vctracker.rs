@@ -126,6 +126,16 @@ pub async fn recheck_times(
 
         // If channel_id isn't ignored, update times
         if channel_id != ignored_channel {
+            // Skip if join time is 0
+            let join_time = sqlx::query!("SELECT vctrack_join_time FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+                .fetch_one(database)
+                .await
+                .unwrap()
+                .vctrack_join_time;
+
+            if join_time == 0 { continue; }
+
+            // Update users time
             let query = format!("
                 UPDATE users SET vctrack_total_time = (UNIX_TIMESTAMP() - vctrack_join_time) + vctrack_total_time WHERE guild_id = {guild_id} AND user_id = {user_id};
                 UPDATE users SET vctrack_join_time = UNIX_TIMESTAMP() WHERE guild_id = {guild_id} AND user_id = {user_id}
