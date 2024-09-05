@@ -43,12 +43,14 @@ pub async fn on_user_vc_disconnect(data: &Data, old: &Option<VoiceState>, new: &
     
     crate::data::user_table_check(&data.database, guild_id, user_id).await;
 
-    // Set ignored channel id
+    // Check for ignored channel
     let ignored_channel_id = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
             .fetch_one(&data.database)
             .await
             .unwrap();
     let ignored_channel_id = ignored_channel_id.vctrack_ignored_channel.unwrap_or(0);
+
+    if ignored_channel_id == new.channel_id.unwrap().get() { return Ok(()); }
 
     // Check if user join time is 0
     let join_time = sqlx::query!("SELECT vctrack_join_time FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
@@ -63,14 +65,14 @@ pub async fn on_user_vc_disconnect(data: &Data, old: &Option<VoiceState>, new: &
 
     // Check if old.channel_id isn't ignored channel
     if old.as_ref().unwrap().channel_id.unwrap().get() != ignored_channel_id {
-    let query = format!("
-        UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
-        UPDATE users SET vctrack_join_time = 0 WHERE guild_id = {guild_id} AND user_id = {user_id}");
+        let query = format!("
+            UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
+            UPDATE users SET vctrack_join_time = 0 WHERE guild_id = {guild_id} AND user_id = {user_id}");
 
-    sqlx::raw_sql(&query)
-        .execute(&data.database)
-        .await
-        .unwrap();
+        sqlx::raw_sql(&query)
+            .execute(&data.database)
+            .await
+            .unwrap();
     }
 
     Ok(())
