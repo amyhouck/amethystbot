@@ -50,15 +50,13 @@ pub async fn on_user_vc_disconnect(data: &Data, old: &Option<VoiceState>, new: &
             .unwrap();
     let ignored_channel_id = ignored_channel_id.vctrack_ignored_channel.unwrap_or(0);
 
-    if ignored_channel_id == new.channel_id.unwrap().get() { return Ok(()); }
-
     // Check if user join time is 0
     let join_time = sqlx::query!("SELECT vctrack_join_time FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
         .fetch_one(&data.database)
         .await
         .unwrap();
 
-    if join_time.vctrack_join_time == 0 {
+    if join_time.vctrack_join_time == 0 && old.as_ref().unwrap().channel_id.unwrap().get() != ignored_channel_id {
         log::write_log(log::LogType::VCTrackerSafeguardSkip { guild_id, user_id });
         return Ok(());
     }
