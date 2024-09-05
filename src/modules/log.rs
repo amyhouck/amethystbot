@@ -16,6 +16,7 @@ pub enum LogType<'a> {
     BotGuildLogin { guild_id: u64 },
     BotGuildDBRegister { guild_id: u64, table_name: String },
     BotStartup,
+    BotShutdown,
 
     // User Logging
     UserDBRegister { guild_id: u64, user_id: u64 },
@@ -97,6 +98,11 @@ pub fn write_log(log_info: LogType) {
             let msg = format!("[ BOT ] AmethystBot is online!");
             println!("{msg}");
         },
+
+        LogType::BotShutdown => {
+            let msg = format!("[ BOT ] AmethystBot is shutting down!");
+            println!("{msg}");
+        }
 
         // User Logging
         LogType::UserDBRegister { guild_id, user_id } => {
