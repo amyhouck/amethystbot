@@ -262,7 +262,7 @@ pub async fn bomb(
 ) -> Result<(), Error> {
     // Don't allow attacking self
     if &target == ctx.author() {
-        log::write_log(log::LogType::CommandError { ctx, error_msg: String::from("User tried to bomb themself.") });
+        log::write_log(log::LogType::CommandError { ctx  });
 
         return Err("You can't do that!".into());
     }

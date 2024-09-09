@@ -4,7 +4,7 @@ use crate::Context;
 pub enum LogType<'a> {
     // Command Types
     CommandExecution { ctx: Context<'a> },
-    CommandError { ctx: Context<'a>, error_msg: String },
+    CommandError { ctx: Context<'a> },
 
     // Birthday Module
     BirthdayTimerReset { duration: String },
@@ -36,7 +36,7 @@ pub enum LogType<'a> {
 
 // Logging function
 pub fn write_log(log_info: LogType) {
-    match log_info {
+    let msg = match log_info {
         // Command Types
         LogType::CommandExecution { ctx } => {
             let command_location = if ctx.guild_id().is_none() {
@@ -45,102 +45,60 @@ pub fn write_log(log_info: LogType) {
                 format!("Guild ID: {}", ctx.guild_id().unwrap().get())
             };
 
-            let msg = format!("[ LOG ] Command execution - {command_location} - Channel ID: {} - User ID: {} - Command: {}",
+            format!("[ LOG ] Command execution - {command_location} - Channel ID: {} - User ID: {} - Command: {}",
                 ctx.channel_id().get(),
                 ctx.author().id.get(),
                 ctx.command().name,
-            );
-            println!("{msg}");
+            )
         },
 
-        LogType::CommandError { ctx, error_msg } => {
+        LogType::CommandError { ctx} => {
             let command_location = if ctx.guild_id().is_none() {
                 String::from("User DM")
             } else {
                 format!("Guild ID: {}", ctx.guild_id().unwrap().get())
             };
 
-            let msg = format!("[ LOG ] Command error - {command_location} - Channel ID: {} - User ID: {} - Command String: {}",
+            format!("[ LOG ] Command error - {command_location} - Channel ID: {} - User ID: {} - Command String: {}",
                 ctx.channel_id().get(),
                 ctx.author().id.get(),
                 ctx.invocation_string(),
-            );
-            println!("{msg}");
-
-            let msg = format!("[ LOG ] Error: {error_msg}");
-            println!("{msg}");
+            )
         },
 
         // Birthday Module
-        LogType::BirthdayTimerReset { duration } => {
-            let msg = format!("[ BIRTHDAY ] Duration until next birthday check: {duration}");
-            println!("{msg}");
-        },
+        LogType::BirthdayTimerReset { duration } => format!("[ BIRTHDAY ] Duration until next birthday check: {duration}"),
 
         // Welcome Message Module
-        LogType::WelcomeNewUser { guild_id } => {
-            let msg = format!("[ WELCOME ] New welcome message posted - Guild ID: {guild_id}");
-            println!("{msg}");
-        },
+        LogType::WelcomeNewUser { guild_id } => format!("[ WELCOME ] New welcome message posted - Guild ID: {guild_id}"),
 
         // Bot Events
-        LogType::BotGuildLogin { guild_id } => {
-            let msg = format!("[ BOT ] Logged into guild - Guild ID: {guild_id}");
-            println!("{msg}");
-        },
+        LogType::BotGuildLogin { guild_id } => format!("[ BOT ] Logged into guild - Guild ID: {guild_id}"),
 
-        LogType::BotGuildDBRegister { guild_id, table_name} => {
-            let msg = format!("[ BOT ] Registering new guild into table \"{table_name}\" - Guild ID: {guild_id}");
-            println!("{msg}");
-        },
+        LogType::BotGuildDBRegister { guild_id, table_name} => format!("[ BOT ] Registering new guild into table \"{table_name}\" - Guild ID: {guild_id}"),
         
-        LogType::BotStartup => {
-            let msg = format!("[ BOT ] AmethystBot is online!");
-            println!("{msg}");
-        },
+        LogType::BotStartup => format!("[ BOT ] AmethystBot is online!"),
 
-        LogType::BotShutdown => {
-            let msg = format!("[ BOT ] AmethystBot is shutting down!");
-            println!("{msg}");
-        }
+        LogType::BotShutdown => format!("[ BOT ] AmethystBot is shutting down!"),
 
         // User Logging
-        LogType::UserDBRegister { guild_id, user_id } => {
-            let msg = format!("[ USER ] New user added to database - Guild ID: {guild_id} - User ID: {user_id}");
-            println!("{msg}");
-        },
+        LogType::UserDBRegister { guild_id, user_id } => format!("[ USER ] New user added to database - Guild ID: {guild_id} - User ID: {user_id}"),
 
-        LogType::UserDBRemove => {
-            let msg = format!("[ USER ] User left a server and associated data has been removed.");
-            println!("{msg}");
-        },
+        LogType::UserDBRemove => format!("[ USER ] User left a server and associated data has been removed."),
 
         // Database Logging
-        LogType::DBError { db_error } => {
-            let msg = format!("[ DATABASE - ERROR ] An error occurred trying to query the databse: {db_error}");
-            println!("{msg}");
-        },
+        LogType::DBError { db_error } => format!("[ DATABASE - ERROR ] An error occurred trying to query the databse: {db_error}"),
 
         // MTG Module
-        LogType::MTGScryfallError { error } => {
-            let msg = format!("[ MTG ] An error occurred with data from Scryfall: {error}");
-            println!("{msg}");
-        },
+        LogType::MTGScryfallError { error } => format!("[ MTG ] An error occurred with data from Scryfall: {error}"),
 
-        LogType::MTGScryfallParsingError { error } => {
-            let msg = format!("[ MTG ] An error occurred trying to parse the Scryfall data: {error}");
-            println!("{msg}");
-        }
+        LogType::MTGScryfallParsingError { error } => format!("[ MTG ] An error occurred trying to parse the Scryfall data: {error}"),
 
         // VCTracker Module
-        LogType::VCTrackerSafeguardAdjustment { guild_id, user_id } => {
-            let msg = format!("[ VCTracker ] SAFEGUARD - Adjusted time for User ID ({user_id}) - Guild ID: {guild_id}");
-            println!("{msg}");
-        }
+        LogType::VCTrackerSafeguardAdjustment { guild_id, user_id } => format!("[ VCTracker ] SAFEGUARD - Adjusted time for User ID ({user_id}) - Guild ID: {guild_id}"),
 
-        LogType::VCTrackerSafeguardSkip { guild_id, user_id } => {
-            let msg = format!("[ VCTracker ] SAFEGUARD - Skipping user's time update. Guild ID: {guild_id} - User ID: {user_id}");
-            println!("{msg}");
-        }
-    }
+        LogType::VCTrackerSafeguardSkip { guild_id, user_id } => format!("[ VCTracker ] SAFEGUARD - Skipping user's time update. Guild ID: {guild_id} - User ID: {user_id}"),
+    };
+
+    println!("{msg}");
 }
