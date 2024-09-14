@@ -32,6 +32,8 @@ pub enum LogType<'a> {
     // VCTracker Module
     VCTrackerSafeguardAdjustment { guild_id: u64, user_id: u64 },
     VCTrackerSafeguardSkip { guild_id: u64, user_id: u64},
+    VCTrackerResetMonthlyComplete,
+    VCTrackerResetMonthlyDuration { duration: String },
 }
 
 // Logging function
@@ -98,6 +100,10 @@ pub fn write_log(log_info: LogType) {
         LogType::VCTrackerSafeguardAdjustment { guild_id, user_id } => format!("[ VCTracker ] SAFEGUARD - Adjusted time for User ID ({user_id}) - Guild ID: {guild_id}"),
 
         LogType::VCTrackerSafeguardSkip { guild_id, user_id } => format!("[ VCTracker ] SAFEGUARD - Skipping user's time update. Guild ID: {guild_id} - User ID: {user_id}"),
+
+        LogType::VCTrackerResetMonthlyComplete => format!("[ VCTracker ] Reset monthly VC times for every user."),
+
+        LogType::VCTrackerResetMonthlyDuration { duration } => format!("[ VC Tracker ] Duration until next monthly leaderboard reset: {duration}"),
     };
 
     println!("{msg}");

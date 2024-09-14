@@ -44,6 +44,7 @@ pub struct User {
     pub bomb_failed: u32,
     pub vctrack_join_time: u32,
     pub vctrack_total_time: u32,
+    pub vctrack_monthly_time: u32,
 }
 
 //--------------------------
