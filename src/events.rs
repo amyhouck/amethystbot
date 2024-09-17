@@ -65,7 +65,7 @@ pub async fn on_user_vc_disconnect(data: &Data, old: &Option<VoiceState>, new: &
     if old.as_ref().unwrap().channel_id.unwrap().get() != ignored_channel_id {
         let query = format!("
             UPDATE users SET vctrack_total_time = vctrack_total_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
-            UPDATE users SET vctrack_monthly_time = vctrack_monthly_time + (UNIX_TIMESTAMP() - vctrack_monthly_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
+            UPDATE users SET vctrack_monthly_time = vctrack_monthly_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
             UPDATE users SET vctrack_join_time = 0 WHERE guild_id = {guild_id} AND user_id = {user_id}");
 
         sqlx::raw_sql(&query)

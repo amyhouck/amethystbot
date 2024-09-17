@@ -171,7 +171,7 @@ pub async fn recheck_times(
             // Update users time
             let query = format!("
                 UPDATE users SET vctrack_total_time = (UNIX_TIMESTAMP() - vctrack_join_time) + vctrack_total_time WHERE guild_id = {guild_id} AND user_id = {user_id};
-                UPDATE users SET vctrack_monthly_time = vctrack_monthly_time + (UNIX_TIMESTAMP() - vctrack_monthly_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
+                UPDATE users SET vctrack_monthly_time = vctrack_monthly_time + (UNIX_TIMESTAMP() - vctrack_join_time) WHERE guild_id = {guild_id} AND user_id = {user_id};
                 UPDATE users SET vctrack_join_time = UNIX_TIMESTAMP() WHERE guild_id = {guild_id} AND user_id = {user_id}
             ");
 
