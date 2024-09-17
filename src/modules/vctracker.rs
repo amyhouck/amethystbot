@@ -182,3 +182,17 @@ pub async fn recheck_times(
         }
     }
 }
+
+// Reset monthly times
+pub async fn vctracker_reset_monthly(database: &sqlx::MySqlPool) {
+    let current_time = chrono::Utc::now();
+
+    if current_time.format("%d %H:%M:%S").to_string() == String::from("01 00:00:00") { // Day Hour:Minute:Second
+        sqlx::query!("UPDATE users SET vctrack_monthly_time = 0")
+            .execute(database)
+            .await
+            .unwrap();
+
+        log::write_log(log::LogType::VCTrackerResetMonthlyComplete);
+    }
+}

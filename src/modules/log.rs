@@ -97,13 +97,13 @@ pub fn write_log(log_info: LogType) {
         LogType::MTGScryfallParsingError { error } => format!("[ MTG ] An error occurred trying to parse the Scryfall data: {error}"),
 
         // VCTracker Module
-        LogType::VCTrackerSafeguardAdjustment { guild_id, user_id } => format!("[ VCTracker ] SAFEGUARD - Adjusted time for User ID ({user_id}) - Guild ID: {guild_id}"),
+        LogType::VCTrackerSafeguardAdjustment { guild_id, user_id } => format!("[ VCTRACKER ] SAFEGUARD - Adjusted time for User ID ({user_id}) - Guild ID: {guild_id}"),
 
-        LogType::VCTrackerSafeguardSkip { guild_id, user_id } => format!("[ VCTracker ] SAFEGUARD - Skipping user's time update. Guild ID: {guild_id} - User ID: {user_id}"),
+        LogType::VCTrackerSafeguardSkip { guild_id, user_id } => format!("[ VCTRACKER ] SAFEGUARD - Skipping user's time update. Guild ID: {guild_id} - User ID: {user_id}"),
 
-        LogType::VCTrackerResetMonthlyComplete => format!("[ VCTracker ] Reset monthly VC times for every user."),
+        LogType::VCTrackerResetMonthlyComplete => format!("[ VCTRACKER ] Reset monthly VC times for every user."),
 
-        LogType::VCTrackerResetMonthlyDuration { duration } => format!("[ VC Tracker ] Duration until next monthly leaderboard reset: {duration}"),
+        LogType::VCTrackerResetMonthlyDuration { duration } => format!("[ VCTRACKER ] Duration until next monthly leaderboard reset: {duration}"),
     };
 
     println!("{msg}");
