@@ -1,47 +1,32 @@
-use crate::{Context, Error};
+use crate::{data::determine_display_username, Context, Error};
 use poise::serenity_prelude as serenity;
 
 //--------------------
 // Data
 //--------------------
-#[derive(sqlx::FromRow)]
+#[derive(Default, sqlx::FromRow)]
 struct Quote {
     guild_id: u64,
     adder_id: u64,
     sayer_id: u64,
     quote_id: u32,
     quote: String,
-    timestamp: chrono::NaiveDate
+    timestamp: chrono::NaiveDate,
+    sayer_display_name: String,
+    adder_display_name: String,
 }
 
 //--------------------
 // Functions
 //--------------------
-async fn build_single_quote_embed(ctx: Context<'_>, quote: Quote) -> serenity::CreateEmbed {
-    // Get user information
-    let sayer = serenity::UserId::new(quote.sayer_id).to_user(ctx.http()).await.unwrap();
-    let adder = serenity::UserId::new(quote.adder_id).to_user(ctx.http()).await.unwrap();
+async fn build_single_quote_embed(http: &serenity::Http, quote: Quote) -> serenity::CreateEmbed {
+    // Get serenity user
+    let sayer = serenity::UserId::new(quote.sayer_id).to_user(http).await.unwrap();
 
     // Build embed
-    let server_nick = sayer.nick_in(ctx.http(), quote.guild_id).await;
-    let sayer_name = if server_nick.is_some() {
-        server_nick.unwrap()
-    } else if sayer.global_name.is_some() {
-        sayer.global_name.as_ref().unwrap().to_string()
-    } else {
-        String::from(&sayer.name)
-    };
-    let title = format!("Quote #{} by {}", quote.quote_id, sayer_name);
+    let title = format!("Quote #{} by {}", quote.quote_id, quote.sayer_display_name);
 
-    let server_nick = adder.nick_in(ctx.http(), quote.guild_id).await;
-    let adder_name = if server_nick.is_some() {
-        server_nick.unwrap()
-    } else if adder.global_name.is_some() {
-        adder.global_name.as_ref().unwrap().to_string()
-    } else {
-        String::from(&adder.name)
-    };
-    let footer = serenity::CreateEmbedFooter::new(format!("Added by {} on {}", adder_name, quote.timestamp));
+    let footer = serenity::CreateEmbedFooter::new(format!("Added by {} on {}", quote.adder_display_name, quote.timestamp));
 
     serenity::CreateEmbed::new()
         .colour(0x0b4a6f)
@@ -84,25 +69,14 @@ async fn quote_role_check(ctx: Context<'_>) -> Result<bool, Error> {
     Ok(true)
 }
 
-async fn split_quotes_into_pages(ctx: Context<'_>, guild_quotes: Vec<Quote>) -> Vec<String> {
+fn split_quotes_into_pages(guild_quotes: Vec<Quote>) -> Vec<String> {
     let mut page_content = String::new();
     let mut pages: Vec<String> = Vec::new();
     for (i, quote) in guild_quotes.iter().enumerate() {
-        // Get good displayname from sayer_id, then add to page_content
-        let sayer = serenity::UserId::new(quote.sayer_id).to_user(ctx.http()).await.unwrap();
-        let server_nick = sayer.nick_in(ctx.http(), quote.guild_id).await;
-        let sayer_name = if server_nick.is_some() {
-            server_nick.unwrap()
-        } else if sayer.global_name.is_some() {
-            sayer.global_name.as_ref().unwrap().to_string()
-        } else {
-            String::from(&sayer.name)
-        };
-
         page_content = format!("{page_content}**{}.** \"{}\" \n*\\- {} {}* (ID: {})\n\n",
             i + 1,
             quote.quote,
-            sayer_name,
+            quote.sayer_display_name,
             quote.timestamp,
             quote.quote_id,
         );
@@ -153,9 +127,11 @@ pub async fn addquote(
         guild_id: ctx.guild_id().unwrap().get(),
         adder_id: ctx.author().id.get(),
         sayer_id: sayer.id.get(),
-        quote_id: 0,
         quote,
-        timestamp
+        timestamp,
+        sayer_display_name: determine_display_username(ctx.http(), &sayer, ctx.guild_id().unwrap()).await,
+        adder_display_name: determine_display_username(ctx.http(), ctx.author(), ctx.guild_id().unwrap()).await,
+        ..Default::default()
     };
 
     let max_quote_id = sqlx::query!("SELECT MAX(quote_id) AS quote_id FROM quotes WHERE guild_id = ?", quote_data.guild_id)
@@ -166,20 +142,22 @@ pub async fn addquote(
         .unwrap_or(0);
     quote_data.quote_id = max_quote_id + 1;
 
-    sqlx::query!("INSERT INTO quotes (guild_id, adder_id, sayer_id, quote_id, quote, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+    sqlx::query!("INSERT INTO quotes (guild_id, adder_id, sayer_id, quote_id, quote, timestamp, adder_display_name, sayer_display_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             quote_data.guild_id,
             quote_data.adder_id,
             quote_data.sayer_id,
             quote_data.quote_id,
             quote_data.quote,
-            quote_data.timestamp
+            quote_data.timestamp,
+            quote_data.adder_display_name,
+            quote_data.sayer_display_name
         )
         .execute(&ctx.data().database)
         .await
         .unwrap();
 
     // Build embed then post success
-    let quote_embed = build_single_quote_embed(ctx, quote_data).await;
+    let quote_embed = build_single_quote_embed(ctx.http(), quote_data).await;
 
     ctx.send(
         poise::CreateReply::default()
@@ -222,7 +200,7 @@ pub async fn quote(
     };
 
     // Send quote
-    let quote = build_single_quote_embed(ctx, quote).await;
+    let quote = build_single_quote_embed(ctx.http(), quote).await;
     ctx.send(poise::CreateReply::default().embed(quote)).await?;
 
     Ok(())
@@ -312,8 +290,6 @@ pub async fn setquoterole(
 pub async fn listquotes(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
-    ctx.defer().await?;
-
     // Grab sorted guild quotes into vector
     let guild_id = ctx.guild_id().unwrap().get();
 
@@ -323,7 +299,7 @@ pub async fn listquotes(
         .unwrap();
 
     // Create initial embed
-    let pages = split_quotes_into_pages(ctx, guild_quotes).await;
+    let pages = split_quotes_into_pages(guild_quotes);
     let mut page_num = 0;
     let ctx_id = ctx.id();
     let prev_id = format!("{ctx_id}prev");

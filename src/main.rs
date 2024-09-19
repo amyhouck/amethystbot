@@ -353,7 +353,6 @@ async fn main() {
                 quotes::setquoterole(),
                 quotes::listquotes(),
                 bot_management::shutdown(),
-                bot_management::reset_display_names(),
             ],
             pre_command: |ctx| {
                 Box::pin(async move {

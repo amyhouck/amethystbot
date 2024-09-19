@@ -1,4 +1,5 @@
 use crate::log;
+use poise::serenity_prelude as serenity;
 
 //--------------------------
 // User table checker
@@ -20,6 +21,24 @@ pub async fn user_table_check(database: &sqlx::MySqlPool, guild_id: u64, user_id
             Err(e) => log::write_log(log::LogType::DBError { db_error: e.to_string() })
         }
     }
+}
+
+//--------------------------
+// Determine username to display
+//--------------------------
+pub async fn determine_display_username(
+    http: &serenity::Http,
+    user: &serenity::User,
+    guild_id: serenity::GuildId
+) -> String {
+    let nick = user.nick_in(http, guild_id).await;
+
+    nick.unwrap_or_else(||
+        match &user.global_name {
+            Some(n) => n.to_string(),
+            None => user.name.to_string()
+        }
+    )
 }
 
 //--------------------------
