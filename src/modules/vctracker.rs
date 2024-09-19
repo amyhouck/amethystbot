@@ -55,8 +55,6 @@ pub async fn vctop(
     ctx: Context<'_>,
     #[rename = "type"] leaderboard_type: Option<VCTopType>,
 ) -> Result<(), Error> {
-    ctx.defer().await?;
-
     let leaderboard_type = leaderboard_type.unwrap_or(VCTopType::All);
 
     // Grab guild info and recheck voice times
@@ -71,23 +69,23 @@ pub async fn vctop(
     recheck_times(voice_states, &ctx.data().database).await;
 
     // Grab and sort list
-    let times: Vec<(u64, u32)> = match leaderboard_type {
+    let times: Vec<(String, u32)> = match leaderboard_type {
         VCTopType::All => {
-            sqlx::query!("SELECT user_id, vctrack_total_time FROM users WHERE guild_id = ? ORDER BY vctrack_total_time DESC LIMIT 10", guild_id)
+            sqlx::query!("SELECT display_name, vctrack_total_time FROM users WHERE guild_id = ? ORDER BY vctrack_total_time DESC LIMIT 10", guild_id)
                 .fetch_all(&ctx.data().database)
                 .await
                 .unwrap()
                 .iter()
-                .map(|r| (r.user_id, r.vctrack_total_time))
+                .map(|r| (r.display_name.to_string(), r.vctrack_total_time))
                 .collect()
         },
         VCTopType::Monthly => {
-            sqlx::query!("SELECT user_id, vctrack_monthly_time FROM users WHERE guild_id = ? ORDER BY vctrack_monthly_time DESC LIMIT 10", guild_id)
+            sqlx::query!("SELECT display_name, vctrack_monthly_time FROM users WHERE guild_id = ? ORDER BY vctrack_monthly_time DESC LIMIT 10", guild_id)
                 .fetch_all(&ctx.data().database)
                 .await
                 .unwrap()
                 .iter()
-                .map(|r| (r.user_id, r.vctrack_monthly_time))
+                .map(|r| (r.display_name.to_string(), r.vctrack_monthly_time))
                 .collect()
         }
     };
@@ -96,22 +94,10 @@ pub async fn vctop(
     let mut embed_desc = String::new();
 
     for (i, user) in times.iter().enumerate() {
-        // Get username to display
-        let disc_user = serenity::UserId::new(user.0).to_user(ctx.http()).await.unwrap();
-        let user_nick = disc_user.nick_in(ctx.http(), guild_id).await;
-
-        let user_nick = if user_nick.is_some() {
-            user_nick.unwrap()
-        } else if disc_user.global_name.is_some() {
-            disc_user.global_name.as_ref().unwrap().to_string()
-        } else {
-            disc_user.name
-        };
-
         // Format into embed_desc
         embed_desc = format!("{embed_desc}**{}.** {} - {}h {}m {}s\n",
             i + 1,
-            user_nick,
+            user.0,
             (user.1 / 60) / 60,
             (user.1 / 60) % 60,
             user.1 % 60,
