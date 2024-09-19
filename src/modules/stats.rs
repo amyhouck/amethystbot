@@ -36,15 +36,6 @@ pub async fn stats(
         .await
         .unwrap();
 
-    let server_nick = user.nick_in(ctx.http(), guild_id).await;
-    let title_name = if server_nick.is_some() {
-        server_nick.unwrap()
-    } else if user.global_name.is_some() {
-        user.global_name.as_ref().unwrap().to_string()
-    } else {
-        String::from(&user.name)
-    };
-
     let vctime = format!("{}h {}m {}s",
         (user_data.vctrack_total_time / 60) / 60,
         (user_data.vctrack_total_time / 60) % 60,
@@ -68,7 +59,7 @@ pub async fn stats(
     );
 
     let stat_embed = serenity::CreateEmbed::new()
-        .title(format!("{title_name}'s stats"))
+        .title(format!("{}'s stats", user_data.display_name))
         .thumbnail(user.face())
         .description(embed_desc)
         .colour(0x8caac2);
