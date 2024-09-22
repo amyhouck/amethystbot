@@ -20,6 +20,7 @@ pub enum LogType<'a> {
 
     // User Logging
     UserDBRegister { guild_id: u64, user_id: u64 },
+    UserDBNameChange { guild_id: u64, user_id: u64 },
     UserDBRemove,
 
     // Database Logging
@@ -85,7 +86,7 @@ pub fn write_log(log_info: LogType) {
 
         // User Logging
         LogType::UserDBRegister { guild_id, user_id } => format!("[ USER ] New user added to database - Guild ID: {guild_id} - User ID: {user_id}"),
-
+        LogType::UserDBNameChange { guild_id, user_id } => format!("[ USER ] Altered saved display name in database - Guild ID: {guild_id} - User ID: {user_id}"),
         LogType::UserDBRemove => format!("[ USER ] User left a server and associated data has been removed."),
 
         // Database Logging

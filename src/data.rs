@@ -34,7 +34,7 @@ pub async fn user_table_check(database: &sqlx::MySqlPool, http: &serenity::Http,
             .await
             .unwrap();
 
-        println!("username updated");
+        log::write_log(log::LogType::UserDBNameChange { guild_id: guild_id.get(), user_id: user.id.get() });
     }
 }
 
