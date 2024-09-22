@@ -13,8 +13,6 @@ pub async fn on_user_vc_connect(data: &Data, old: &Option<VoiceState>, new: &Voi
     // Get needed info
     let guild_id = new.guild_id.unwrap().get();
     let user_id = new.user_id.get();
-    
-    crate::data::user_table_check(&data.database, guild_id, user_id).await;
 
     // Set ignored channel id
     let ignored_channel_id = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
@@ -40,8 +38,6 @@ pub async fn on_user_vc_disconnect(data: &Data, old: &Option<VoiceState>, new: &
     // Get needed info
     let guild_id = new.guild_id.unwrap().get();
     let user_id = new.user_id.get();
-    
-    crate::data::user_table_check(&data.database, guild_id, user_id).await;
 
     // Check for ignored channel
     let ignored_channel_id = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
@@ -83,8 +79,6 @@ pub async fn on_user_vc_move(data: &Data, old: &Option<VoiceState>, new: &VoiceS
     // Get needed info
     let guild_id = new.guild_id.unwrap().get();
     let user_id = new.user_id.get();
-    
-    crate::data::user_table_check(&data.database, guild_id, user_id).await;
 
     // Set ignored channel id
     let ignored_channel_id = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)

@@ -30,7 +30,7 @@ pub async fn stats(
     }
     
     // Build stats embed
-    user_table_check(&ctx.data().database, guild_id, user_id.get()).await;
+    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &user).await;
     let user_data = sqlx::query_as!(User, "SELECT * FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id.get())
         .fetch_one(&ctx.data().database)
         .await

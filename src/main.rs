@@ -2,6 +2,7 @@ mod data;
 mod modules;
 mod events;
 
+use data::user_table_check;
 use poise::serenity_prelude as serenity;
 use dotenv::dotenv;
 use chrono::Utc;
@@ -168,6 +169,8 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
         },
 
         serenity::FullEvent::VoiceStateUpdate { old, new } => {
+            user_table_check(&data.database, &ctx.http, new.guild_id.unwrap(), &new.member.as_ref().unwrap().user).await;
+
             // Handle connection to VC
             if old.is_none() && new.channel_id.is_some() {
                 events::on_user_vc_connect(data, old, new).await?;
@@ -357,6 +360,8 @@ async fn main() {
             pre_command: |ctx| {
                 Box::pin(async move {
                     log::write_log(log::LogType::CommandExecution { ctx });
+
+                    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), ctx.author()).await;
                 })
             },
             event_handler: |ctx, event, framework, data| Box::pin(listener(ctx, event, framework, data)),

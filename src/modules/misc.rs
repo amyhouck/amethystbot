@@ -12,7 +12,7 @@ use chrono::Utc;
 )]
 pub async fn slap(
     ctx: Context<'_>,
-    victim: serenity::User
+    mut victim: serenity::User
 ) -> Result<(), Error> {
     // All hail RNG
     let random_gif = {
@@ -41,6 +41,7 @@ pub async fn slap(
 
     if ctx.guild_id().unwrap().get() == 545745915151908865 && funny == 3 {
         victim_id = 811402226643632159;
+        victim = serenity::UserId::from(victim_id).to_user(ctx.http()).await.unwrap();
         embed_msg = format!("{} tried to slap {} but hit <@{}> instead!", ctx.author(), victim, victim_id);
     }
 
@@ -54,8 +55,7 @@ pub async fn slap(
     // Stat handling
     let guild_id = ctx.guild_id().unwrap().get();
     let executioner_id = ctx.author().id.get();
-    user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
-    user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
+    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &victim).await;  // - Check victim's existence
 
     if ctx.author() != &victim {
         let query = format!("UPDATE users SET slap_sent = slap_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
@@ -102,8 +102,7 @@ pub async fn cookie(
     let guild_id = ctx.guild_id().unwrap().get();
     let executioner_id = ctx.author().id.get();
     let victim_id = victim.id.get();
-    user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
-    user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
+    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &victim).await;  // - Check victim's existence
 
     if ctx.author() != &victim {
         let query = format!("UPDATE users SET cookie_sent = cookie_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
@@ -150,8 +149,7 @@ pub async fn tea(
     let guild_id = ctx.guild_id().unwrap().get();
     let executioner_id = ctx.author().id.get();
     let victim_id = victim.id.get();
-    user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
-    user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
+    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &victim).await;  // - Check victim's existence
 
     if ctx.author() != &victim {
         let query = format!("UPDATE users SET tea_sent = tea_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
@@ -210,8 +208,7 @@ pub async fn cake(
     let guild_id = ctx.guild_id().unwrap().get();
     let executioner_id = ctx.author().id.get();
     let victim_id = victim.id.get();
-    user_table_check(&ctx.data().database, guild_id, executioner_id).await; // - Check command executioner's existence
-    user_table_check(&ctx.data().database, guild_id, victim_id).await;  // - Check victim's existence
+    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &victim).await;  // - Check victim's existence
 
     // Update stats
     if ctx.author() != &victim {
@@ -321,9 +318,8 @@ pub async fn bomb(
         .embed(bomb_embed)
         .components(vec![buttons])).await?;
 
-    // Handle executioner stats and check for target
-    user_table_check(&ctx.data().database, bomb.guild_id, bomb.sender).await;
-    user_table_check(&ctx.data().database, bomb.guild_id, bomb.target).await;
+    // Handle stats and check for target
+    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &target).await;
     sqlx::query!("UPDATE users SET bomb_sent = bomb_sent + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.sender)
         .execute(&ctx.data().database)
         .await

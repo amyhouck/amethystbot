@@ -4,22 +4,37 @@ use poise::serenity_prelude as serenity;
 //--------------------------
 // User table checker
 //--------------------------
-pub async fn user_table_check(database: &sqlx::MySqlPool, guild_id: u64, user_id: u64) {
-    // If user doesn't exist, add row
-    let count = sqlx::query!("SELECT COUNT(user_id) AS count FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+pub async fn user_table_check(database: &sqlx::MySqlPool, http: &serenity::Http, guild_id: serenity::GuildId, user: &serenity::User) {
+    // Grab user info
+    let db_user = sqlx::query!("SELECT display_name, COUNT(user_id) AS count FROM users WHERE guild_id = ? AND user_id = ?", guild_id.get(), user.id.get())
             .fetch_one(database)
             .await
             .unwrap();
 
-    if count.count == 0 {
-        let query_attempt = sqlx::query!("INSERT INTO users (guild_id, user_id) VALUES (?, ?)", guild_id, user_id)
+    let display_name = determine_display_username(http, user, guild_id).await;
+
+    // If user doesn't exist, add them. Returns after adding
+    if db_user.count == 0 {
+        let query_attempt = sqlx::query!("INSERT INTO users (guild_id, user_id, display_name) VALUES (?, ?, ?)", guild_id.get(), user.id.get(), display_name)
             .execute(database)
             .await;
         
         match query_attempt {
-            Ok(_) => log::write_log(log::LogType::UserDBRegister { guild_id, user_id }),
+            Ok(_) => log::write_log(log::LogType::UserDBRegister { guild_id: guild_id.get(), user_id: user.id.get() }),
             Err(e) => log::write_log(log::LogType::DBError { db_error: e.to_string() })
         }
+
+        return;
+    }
+
+    // If the display names don't match, update database
+    if db_user.display_name.unwrap() != display_name {
+        sqlx::query!("UPDATE users SET display_name = ? WHERE guild_id = ? AND user_id = ?", display_name, guild_id.get(), user.id.get())
+            .execute(database)
+            .await
+            .unwrap();
+
+        println!("username updated");
     }
 }
 
