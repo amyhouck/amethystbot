@@ -2,7 +2,7 @@ mod data;
 mod modules;
 mod events;
 
-use data::user_table_check;
+use data::{alter_db_display_name, determine_display_username, user_table_check};
 use poise::serenity_prelude as serenity;
 use dotenv::dotenv;
 use chrono::Utc;
@@ -160,6 +160,16 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                 .unwrap();
 
             log::write_log(log::LogType::UserDBRemove);
+        },
+
+        serenity::FullEvent::GuildMemberUpdate { new, .. } => {
+            let new = match new {
+                Some(data) => data,
+                None => return Ok(())
+            };
+
+            let display_name = determine_display_username(&ctx.http, &new.user, new.guild_id).await;
+            alter_db_display_name(&data.database, new.guild_id.get(), new.user.id.get(), display_name).await;
         },
 
         serenity::FullEvent::Message { new_message } => {

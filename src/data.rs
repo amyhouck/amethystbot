@@ -29,10 +29,7 @@ pub async fn user_table_check(database: &sqlx::MySqlPool, http: &serenity::Http,
 
     // If the display names don't match, update database
     if db_user.display_name.unwrap() != display_name {
-        sqlx::query!("UPDATE users SET display_name = ? WHERE guild_id = ? AND user_id = ?", display_name, guild_id.get(), user.id.get())
-            .execute(database)
-            .await
-            .unwrap();
+        alter_db_display_name(database, guild_id.get(), user.id.get(), display_name).await;
 
         log::write_log(log::LogType::UserDBNameChange { guild_id: guild_id.get(), user_id: user.id.get() });
     }
@@ -54,6 +51,25 @@ pub async fn determine_display_username(
             None => user.name.to_string()
         }
     )
+}
+
+//--------------------------
+// Alter display name in DB if needed
+//--------------------------
+pub async fn alter_db_display_name(
+    database: &sqlx::MySqlPool,
+    guild_id: u64,
+    user_id: u64,
+    display_name: String
+) {
+    let query = sqlx::query!("UPDATE users SET display_name = ? WHERE guild_id = ? AND user_id = ? AND display_name != ?", display_name, guild_id, user_id, display_name)
+            .execute(database)
+            .await
+            .unwrap();
+    
+    if query.rows_affected() == 1 {
+        log::write_log(log::LogType::UserDBNameChange { guild_id, user_id });
+    }
 }
 
 //--------------------------
