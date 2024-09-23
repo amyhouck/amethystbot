@@ -365,7 +365,6 @@ async fn main() {
                 quotes::delquote(),
                 quotes::setquoterole(),
                 quotes::listquotes(),
-                bot_management::shutdown(),
             ],
             pre_command: |ctx| {
                 Box::pin(async move {
@@ -384,5 +383,13 @@ async fn main() {
         .await
         .unwrap();
 
+    let shard_manager = client.shard_manager.clone();
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.unwrap();
+
+        log::write_log(log::LogType::BotShutdown);
+        shard_manager.shutdown_all().await;
+    });
+    
     client.start().await.unwrap();
 }
