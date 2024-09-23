@@ -80,14 +80,14 @@ pub fn write_log(log_info: LogType) {
 
         LogType::BotGuildDBRegister { guild_id, table_name} => format!("[ BOT ] Registering new guild into table \"{table_name}\" - Guild ID: {guild_id}"),
         
-        LogType::BotStartup => format!("[ BOT ] AmethystBot is online!"),
+        LogType::BotStartup => String::from("[ BOT ] AmethystBot is online!"),
 
-        LogType::BotShutdown => format!("[ BOT ] AmethystBot is shutting down!"),
+        LogType::BotShutdown => String::from("[ BOT ] AmethystBot is shutting down!"),
 
         // User Logging
         LogType::UserDBRegister { guild_id, user_id } => format!("[ USER ] New user added to database - Guild ID: {guild_id} - User ID: {user_id}"),
         LogType::UserDBNameChange { guild_id, user_id } => format!("[ USER ] Altered saved display name in database - Guild ID: {guild_id} - User ID: {user_id}"),
-        LogType::UserDBRemove => format!("[ USER ] User left a server and associated data has been removed."),
+        LogType::UserDBRemove => String::from("[ USER ] User left a server and associated data has been removed."),
 
         // Database Logging
         LogType::DBError { db_error } => format!("[ DATABASE - ERROR ] An error occurred trying to query the databse: {db_error}"),
@@ -102,7 +102,7 @@ pub fn write_log(log_info: LogType) {
 
         LogType::VCTrackerSafeguardSkip { guild_id, user_id } => format!("[ VCTRACKER ] SAFEGUARD - Skipping user's time update. Guild ID: {guild_id} - User ID: {user_id}"),
 
-        LogType::VCTrackerResetMonthlyComplete => format!("[ VCTRACKER ] Reset monthly VC times for every user."),
+        LogType::VCTrackerResetMonthlyComplete => String::from("[ VCTRACKER ] Reset monthly VC times for every user."),
 
         LogType::VCTrackerResetMonthlyDuration { duration } => format!("[ VCTRACKER ] Duration until next monthly leaderboard reset: {duration}"),
     };

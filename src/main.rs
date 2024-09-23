@@ -209,7 +209,7 @@ async fn birthday_check(ctx: &serenity::Context, data: &Data) {
     // Check the time (10 UTC, 2 Pacific)
     let current_time = Utc::now();
 
-    if current_time.format("%H:%M").to_string() == String::from("10:00") {
+    if current_time.format("%H:%M").to_string() == "10:00" {
         let registered_guild_channels = sqlx::query!("SELECT guild_id, birthday_channel, birthday_role FROM guild_settings")
             .fetch_all(&data.database)
             .await

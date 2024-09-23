@@ -184,7 +184,7 @@ pub async fn edit (
     }
 
     if month.is_none() && day.is_none() && nickname.is_none() {
-        return Err(format!("You must choose at least one option to edit!").into());
+        return Err("You must choose at least one option to edit!".into());
     }
 
     // Build and execute query
@@ -285,10 +285,7 @@ pub async fn setrole(
     let guild_id = ctx.guild_id().unwrap().get();
 
     // Build/run query
-    let role_id: Option<u64> = match &role {
-        Some(r) => Some(r.id.get()),
-        None => None
-    };
+    let role_id: Option<u64> = role.as_ref().map(|r| r.id.get());
 
     sqlx::query!("UPDATE guild_settings SET birthday_role = ? WHERE guild_id = ?", role_id, guild_id)
         .execute(&ctx.data().database)
@@ -333,7 +330,7 @@ pub async fn list(
         .await
         .unwrap();
     
-    if birthdays.len() == 0 {
+    if birthdays.is_empty() {
         return Err("No birthdays found for this server!".into());
     }
 

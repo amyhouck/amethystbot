@@ -60,15 +60,15 @@ fn create_double_face_embed(scryfall: ScryfallMTGCard) -> Vec<serenity::CreateEm
     let scryfall_faces = scryfall.card_faces.unwrap();
     let mut card_faces: Vec<serenity::CreateEmbed> = Vec::new();
 
-    for i in 0..=1 { // For loop needed for indexing into structure
+    for face in scryfall_faces { // For loop needed for indexing into structure
         // Build embed description
-        let cost = format!("**Cost:** {}\n", scryfall_faces[i].mana_cost.replace('{', "(").replace('}', ")"));
+        let cost = format!("**Cost:** {}\n", face.mana_cost.replace('{', "(").replace('}', ")"));
 
         let set_info = format!("**Set:** {} - *{}*\n", scryfall.set.to_uppercase(), scryfall.set_name);
 
         let available = format!("**Available:** {}\n\n", scryfall.games.join(", "));
 
-        let oracle_text = match &scryfall_faces[i].oracle_text {
+        let oracle_text = match &face.oracle_text {
             Some(text) => {
                 let mut oracle = text.clone();
                 oracle = oracle.replace('{', "(");
@@ -79,7 +79,7 @@ fn create_double_face_embed(scryfall: ScryfallMTGCard) -> Vec<serenity::CreateEm
             None => String::new()
         };
 
-        let flavor_text = match &scryfall_faces[i].flavor_text {
+        let flavor_text = match &face.flavor_text {
             Some(text) => format!("\n\n{text}"),
             None => String::new()
         };
@@ -88,7 +88,7 @@ fn create_double_face_embed(scryfall: ScryfallMTGCard) -> Vec<serenity::CreateEm
             cost,
             set_info,
             available,
-            scryfall_faces[i].type_line.as_ref().unwrap(),
+            face.type_line.as_ref().unwrap(),
             oracle_text,
             flavor_text
         );
@@ -96,15 +96,15 @@ fn create_double_face_embed(scryfall: ScryfallMTGCard) -> Vec<serenity::CreateEm
         // Build and push embed
         let mut card_embed = serenity::CreateEmbed::new()
             .colour(0x000000)
-            .title(&scryfall_faces[i].name)
+            .title(&face.name)
             .url(scryfall.scryfall_uri.clone())
             .description(embed_desc);
 
-        card_embed = add_fields(&scryfall_faces[i].power, &scryfall_faces[i].toughness, &scryfall_faces[i].loyalty, card_embed);
+        card_embed = add_fields(&face.power, &face.toughness, &face.loyalty, card_embed);
     
         if scryfall.image_status.as_str() != "missing" {
             let image_url = if scryfall.image_uris.is_none() {
-                scryfall_faces[i].image_uris.as_ref().unwrap()["border_crop"].as_str().unwrap_or("")
+                face.image_uris.as_ref().unwrap()["border_crop"].as_str().unwrap_or("")
             } else {
                 scryfall.image_uris.as_ref().unwrap()["border_crop"].as_str().unwrap_or("")
             };
@@ -275,7 +275,7 @@ async fn scryfall_query(
     // Handle errors
     if scryfall["object"].as_str().unwrap() == "error" {
         log::write_log(log::LogType::MTGScryfallError { error: scryfall["details"].as_str().unwrap().to_string() });
-        return Err(format!("{}", scryfall["details"].as_str().unwrap()).into());
+        return Err(scryfall["details"].as_str().unwrap().into());
     }
 
     Ok(scryfall)
@@ -302,12 +302,9 @@ pub async fn card(
     #[max_length = 4] collector_num: Option<i64>,
 ) -> Result<(), Error> {
     // Validate paramters
-    match valid_parameters(&name, &set, &collector_num) {
-        Err(e) => return Err(e),
-        _ => {}
-    }
+    valid_parameters(&name, &set, &collector_num)?;
 
-    let set = set.unwrap_or(String::new()).to_lowercase();
+    let set = set.unwrap_or_default().to_lowercase();
 
     // Determine API URL and perform query
     let api_url = if collector_num.is_some() {
