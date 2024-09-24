@@ -66,7 +66,9 @@ pub async fn vctop(
     for (_, v) in ctx_voice_states {
         voice_states.push(v);
     }
-    recheck_times(voice_states, &ctx.data().database).await;
+    
+    let futures = voice_states.iter().map(|vs| recheck_time(vs, &ctx.data().database));
+    futures::future::join_all(futures).await;
 
     // Grab and sort list
     let times: Vec<(String, u32)> = match leaderboard_type {
@@ -123,37 +125,34 @@ pub async fn vctop(
     Ok(())
 }
 
-// Recheck VC participant times
-pub async fn recheck_times(
-    voice_states: Vec<serenity::VoiceState>,
+// Recheck VC participant time
+pub async fn recheck_time(
+    voice_state: &serenity::VoiceState,
     database: &sqlx::MySqlPool
 ) {
-    for user in voice_states {
-        // Grab necessary info
-        let user_id = user.user_id.get();
-        let guild_id = user.guild_id.unwrap().get();
-        let channel_id = user.channel_id.unwrap().get();
-        let ignored_channel = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
+    // Grab necessary info
+    let user_id = voice_state.user_id.get();
+    let guild_id = voice_state.guild_id.unwrap().get();
+    let channel_id = voice_state.channel_id.unwrap().get();
+    let ignored_channel = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
+        .fetch_one(database)
+        .await
+        .unwrap()
+        .vctrack_ignored_channel
+        .unwrap_or(0);
+
+    // If channel_id isn't ignored, update times
+    if channel_id != ignored_channel {
+        // Skip if join time is 0
+        let join_time = sqlx::query!("SELECT vctrack_join_time FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
             .fetch_one(database)
             .await
             .unwrap()
-            .vctrack_ignored_channel
-            .unwrap_or(0);
+            .vctrack_join_time;
 
-        // If channel_id isn't ignored, update times
-        if channel_id != ignored_channel {
-            // Skip if join time is 0
-            let join_time = sqlx::query!("SELECT vctrack_join_time FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
-                .fetch_one(database)
-                .await
-                .unwrap()
-                .vctrack_join_time;
-
-            if join_time == 0 {
-                log::write_log(log::LogType::VCTrackerSafeguardSkip { guild_id, user_id });
-                continue;
-            }
-
+        if join_time == 0 {
+            log::write_log(log::LogType::VCTrackerSafeguardSkip { guild_id, user_id });
+        } else {
             // Update users time
             let query = format!("
                 UPDATE users SET vctrack_total_time = (UNIX_TIMESTAMP() - vctrack_join_time) + vctrack_total_time WHERE guild_id = {guild_id} AND user_id = {user_id};
