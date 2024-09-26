@@ -7,7 +7,6 @@ use poise::serenity_prelude as serenity;
 use dotenv::dotenv;
 use chrono::Utc;
 use cron::Schedule;
-use rand::{Rng, thread_rng};
 use std::{str::FromStr, sync::Arc};
 use std::time::Duration;
 use modules::*;
@@ -40,7 +39,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             let new_data = Arc::clone(&data);
             tokio::spawn(async move {
                 loop {
-                    birthday_check(&new_ctx, &new_data).await;
+                    birthday::birthday_check(&new_ctx, &new_data).await;
 
                     // Calculate sleep until the next proper birthday time
                     let current_time = chrono::Utc::now();
@@ -202,79 +201,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
     Ok(())
 }
 
-//--------------------------
-// Birthday Checker
-//--------------------------
-async fn birthday_check(ctx: &serenity::Context, data: &Data) {
-    // Check the time (10 UTC, 2 Pacific)
-    let current_time = Utc::now();
 
-    if current_time.format("%H:%M").to_string() == "10:00" {
-        let registered_guild_channels = sqlx::query!("SELECT guild_id, birthday_channel, birthday_role FROM guild_settings")
-            .fetch_all(&data.database)
-            .await
-            .unwrap();
-
-        let current_date = Utc::now().format("%m-%d").to_string();
-        let current_date: Vec<u8> = current_date.split('-').map(|i| i.parse::<u8>().unwrap()).collect();
-
-        // Loop the registered guilds
-        for guild in registered_guild_channels {
-            // Check for birthday channel
-            if guild.birthday_channel.is_none() {
-                continue;
-            }
-            let channel_id = serenity::ChannelId::new(guild.birthday_channel.unwrap());
-
-            // Select birthdays
-            let guild_birthdays = sqlx::query!("SELECT * FROM birthday WHERE guild_id = ?", guild.guild_id)
-                .fetch_all(&data.database)
-                .await
-                .unwrap();
-
-            for birthday in guild_birthdays {
-                if birthday.birthmonth == current_date[0] && birthday.birthday == current_date[1] {
-                    // Take care of the birthday message
-                    let username = birthday.nickname.unwrap_or(serenity::UserId::new(birthday.user_id).to_user(&ctx).await.unwrap().name);
-                    let bday_msg = format!("Happy birthday, {username}! :birthday: We hope you have a great day!");
-
-                    let random_gif = {
-                        let mut rng = thread_rng();
-                        rng.gen_range(0..data.birthday_gifs.len())
-                    };
-
-                    let embed = serenity::CreateEmbed::new()
-                        .colour(0xFF0095)
-                        .thumbnail("https://media.istockphoto.com/vectors/birthday-cake-vector-isolated-vector-id901911608?k=6&m=901911608&s=612x612&w=0&h=d6v27h_mYUaUe0iSrtoX5fTw-2wGVIY4UTbQPeI-T5k=")
-                        .title(bday_msg)
-                        .image(&data.birthday_gifs[random_gif]);
-
-                    let msg = serenity::CreateMessage::new()
-                        .content("@everyone :birthday:")
-                        .embed(embed);
-
-                    channel_id.send_message(&ctx, msg).await.unwrap();
-
-                    // Give birthday role
-                    if guild.birthday_role.is_some() {
-                        let birthday_guild = serenity::GuildId::new(guild.guild_id);
-                        let birthday_member = birthday_guild.member(&ctx, serenity::UserId::new(birthday.user_id)).await.unwrap();
-
-                        birthday_member.add_role(&ctx, serenity::RoleId::new(guild.birthday_role.unwrap())).await.unwrap();
-                    }
-                } else {
-                    // Remove birthday role if member has it
-                    if guild.birthday_role.is_some() {
-                        let birthday_guild = serenity::GuildId::new(guild.guild_id);
-                        let birthday_member = birthday_guild.member(&ctx, serenity::UserId::new(birthday.user_id)).await.unwrap();
-
-                        birthday_member.remove_role(&ctx, serenity::RoleId::new(guild.birthday_role.unwrap())).await.unwrap();
-                    }
-                }
-            }
-        }
-    }
-}
 
 //--------------------------
 // Main
