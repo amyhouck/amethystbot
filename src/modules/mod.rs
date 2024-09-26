@@ -7,3 +7,5 @@ pub mod misc;
 pub mod stats;
 pub mod quotes;
 pub mod bot_management;
+
+pub mod minigames;

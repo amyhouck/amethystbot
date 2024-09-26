@@ -351,7 +351,6 @@ async fn main() {
                 birthday::bday(),
                 misc::slap(),
                 misc::cookie(),
-                misc::bomb(),
                 misc::tea(),
                 misc::cake(),
                 welcome::welcome(),
@@ -365,6 +364,8 @@ async fn main() {
                 quotes::delquote(),
                 quotes::setquoterole(),
                 quotes::listquotes(),
+
+                minigames::bomb::bomb(),
             ],
             pre_command: |ctx| {
                 Box::pin(async move {
