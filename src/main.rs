@@ -2,27 +2,13 @@ mod data;
 mod modules;
 mod events;
 
-use data::{alter_db_display_name, determine_display_username, user_table_check};
+use data::{Data, alter_db_display_name, determine_display_username, user_table_check};
 use poise::serenity_prelude as serenity;
 use dotenv::dotenv;
 use chrono::Utc;
 use cron::Schedule;
 use std::{str::FromStr, sync::Arc};
-use std::time::Duration;
 use modules::*;
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT};
-
-
-#[derive(Debug, Clone)]
-pub struct Data { // User data, which is stored and accessible in all command invocations
-    database: sqlx::MySqlPool,
-    birthday_gifs: Vec<String>,
-    slap_gifs: Vec<String>,
-    self_slap_gifs: Vec<String>,
-    tea_gifs: Vec<String>,
-    cake_gifs: Vec<String>,
-    client: reqwest::Client,
-}
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -201,66 +187,12 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
     Ok(())
 }
 
-
-
 //--------------------------
 // Main
 //--------------------------
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-
-    // Set Data
-    let database_url = std::env::var("DATABASE_URL").expect("missing DATABASE_URL");
-    let database = sqlx::mysql::MySqlPool::connect(&database_url).await.unwrap();
-    sqlx::migrate!("./migrations").run(&database).await.unwrap();
-
-    let birthday_gifs: Vec<String> = vec![
-        "https://media.giphy.com/media/WRL7YgP42OKns22wRD/giphy.gif".to_string(),
-        "https://media.giphy.com/media/g5R9dok94mrIvplmZd/giphy.gif".to_string(),
-        "https://media.giphy.com/media/l4KhS0BOFBhU2SYIU/giphy.gif".to_string(),
-        "https://media.giphy.com/media/l4KibWpBGWchSqCRy/giphy.gif".to_string(),
-        "https://media.giphy.com/media/arGdCUFTYzs2c/giphy.gif".to_string(),
-    ];
-
-    let slap_gifs: Vec<String> = vec![
-        "https://media.tenor.com/7_ktpmstpIkAAAAC/troutslap.gif".to_string(),
-        "https://media.tenor.com/w5wm0GtfI9EAAAAd/tenor.gif".to_string(),
-    ];
-
-    let self_slap_gifs: Vec<String> = vec![
-        "https://i.makeagif.com/media/6-19-2015/rh-Yg3.gif".to_string(),
-    ];
-
-    let tea_gifs: Vec<String> = vec![
-        "https://media1.tenor.com/m/gyNQ_0VaG-0AAAAC/dalek-exterminate.gif".to_string(),
-        "https://media1.tenor.com/m/IXyaShXuq_IAAAAC/doctor-who-sip.gif".to_string(),
-    ];
-
-    let cake_gifs: Vec<String> = vec![
-        "https://media1.tenor.com/m/Y0RcGnmG2DkAAAAC/cake-birthday-cake.gif".to_string(),
-        "https://media1.tenor.com/m/uhzaWzEXdjcAAAAd/cake-sprinkles.gif".to_string(),
-    ];
-
-    let mut headers = HeaderMap::new();
-    headers.insert(USER_AGENT, HeaderValue::from_static("AmethystBot/1.0"));
-    headers.insert(ACCEPT, HeaderValue::from_static("*/*"));
-
-    let req_client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(30))
-        .default_headers(headers)
-        .build()
-        .unwrap();
-
-    let data = Data {
-        database,
-        birthday_gifs,
-        slap_gifs,
-        self_slap_gifs,
-        tea_gifs,
-        cake_gifs,
-        client: req_client,
-    };
 
     // Build bot
     let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
@@ -270,7 +202,7 @@ async fn main() {
         .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(data.clone())
+                Ok(Data::init().await)
             })
         })
         .options(poise::FrameworkOptions {

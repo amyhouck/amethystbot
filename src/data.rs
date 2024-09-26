@@ -1,5 +1,77 @@
 use crate::log;
 use poise::serenity_prelude as serenity;
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT};
+use std::time::Duration;
+
+//--------------------------
+// Handler for the bot data
+//--------------------------
+#[derive(Debug, Clone)]
+pub struct Data { // User data, which is stored and accessible in all command invocations
+    pub database: sqlx::MySqlPool,
+    pub birthday_gifs: Vec<String>,
+    pub slap_gifs: Vec<String>,
+    pub self_slap_gifs: Vec<String>,
+    pub tea_gifs: Vec<String>,
+    pub cake_gifs: Vec<String>,
+    pub client: reqwest::Client,
+}
+
+impl Data {
+    pub async fn init() -> Self {
+        // Set Data
+        let database_url = std::env::var("DATABASE_URL").expect("missing DATABASE_URL");
+        let database = sqlx::mysql::MySqlPool::connect(&database_url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&database).await.unwrap();
+
+        let birthday_gifs: Vec<String> = vec![
+            "https://media.giphy.com/media/WRL7YgP42OKns22wRD/giphy.gif".to_string(),
+            "https://media.giphy.com/media/g5R9dok94mrIvplmZd/giphy.gif".to_string(),
+            "https://media.giphy.com/media/l4KhS0BOFBhU2SYIU/giphy.gif".to_string(),
+            "https://media.giphy.com/media/l4KibWpBGWchSqCRy/giphy.gif".to_string(),
+            "https://media.giphy.com/media/arGdCUFTYzs2c/giphy.gif".to_string(),
+        ];
+
+        let slap_gifs: Vec<String> = vec![
+            "https://media.tenor.com/7_ktpmstpIkAAAAC/troutslap.gif".to_string(),
+            "https://media.tenor.com/w5wm0GtfI9EAAAAd/tenor.gif".to_string(),
+        ];
+
+        let self_slap_gifs: Vec<String> = vec![
+            "https://i.makeagif.com/media/6-19-2015/rh-Yg3.gif".to_string(),
+        ];
+
+        let tea_gifs: Vec<String> = vec![
+            "https://media1.tenor.com/m/gyNQ_0VaG-0AAAAC/dalek-exterminate.gif".to_string(),
+            "https://media1.tenor.com/m/IXyaShXuq_IAAAAC/doctor-who-sip.gif".to_string(),
+        ];
+
+        let cake_gifs: Vec<String> = vec![
+            "https://media1.tenor.com/m/Y0RcGnmG2DkAAAAC/cake-birthday-cake.gif".to_string(),
+            "https://media1.tenor.com/m/uhzaWzEXdjcAAAAd/cake-sprinkles.gif".to_string(),
+        ];
+
+        let mut headers = HeaderMap::new();
+        headers.insert(USER_AGENT, HeaderValue::from_static("AmethystBot/1.0"));
+        headers.insert(ACCEPT, HeaderValue::from_static("*/*"));
+
+        let req_client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .default_headers(headers)
+            .build()
+            .unwrap();
+
+        Data {
+            database,
+            birthday_gifs,
+            slap_gifs,
+            self_slap_gifs,
+            tea_gifs,
+            cake_gifs,
+            client: req_client,
+        }
+    }
+}
 
 //--------------------------
 // User table checker
