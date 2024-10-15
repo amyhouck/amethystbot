@@ -129,10 +129,15 @@ pub async fn vctop(
 pub async fn recheck_time(
     voice_state: &serenity::VoiceState,
     database: &sqlx::MySqlPool
-) {
+) -> Result<(), Error> {
     // Grab necessary info
     let user_id = voice_state.user_id.get();
-    let guild_id = voice_state.guild_id.unwrap().get();
+
+    let guild_id = match voice_state.guild_id {
+        Some(id) => id.get(),
+        None => return Err("Unable to retrieve voice state information from Discord.".into())
+    };
+
     let channel_id = voice_state.channel_id.unwrap().get();
     let ignored_channel = sqlx::query!("SELECT vctrack_ignored_channel FROM guild_settings WHERE guild_id = ?", guild_id)
         .fetch_one(database)
@@ -166,6 +171,8 @@ pub async fn recheck_time(
                 .unwrap();
         }
     }
+
+    Ok(())
 }
 
 // Reset monthly times

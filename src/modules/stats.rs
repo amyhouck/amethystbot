@@ -26,7 +26,10 @@ pub async fn stats(
     let vc_info = vc_info.get(&user_id);
 
     if vc_info.is_some() {
-        crate::vctracker::recheck_time(vc_info.unwrap(), &ctx.data().database).await;
+        match crate::vctracker::recheck_time(vc_info.unwrap(), &ctx.data().database).await {
+            Ok(_) => {},
+            Err(e) => return Err(e)
+        }
     }
     
     // Build stats embed
