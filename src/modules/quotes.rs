@@ -178,6 +178,7 @@ pub async fn quote(
     ctx: Context<'_>,
     id: Option<u32>,
     user: Option<serenity::User>,
+    text: Option<String>,
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
 
@@ -186,6 +187,8 @@ pub async fn quote(
         format!("SELECT * FROM quotes WHERE guild_id = {} AND quote_id = {}", guild_id, id.unwrap())
     } else if user.is_some() {
         format!("SELECT * FROM quotes WHERE guild_id = {} AND sayer_id = {} ORDER BY RAND() LIMIT 1", guild_id, user.unwrap().id.get())
+    } else if text.is_some() {
+        format!("SELECT * FROM quotes WHERE guild_id = {} AND quote LIKE \"%{}%\"", guild_id, text.unwrap())
     } else {
         format!("SELECT * FROM quotes WHERE guild_id = {} ORDER BY RAND() LIMIT 1", guild_id)
     };
