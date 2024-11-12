@@ -130,6 +130,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
         },
 
         serenity::FullEvent::GuildMemberRemoval { guild_id, user, ..} => {
+            // Remove member from database records
             let guild_id = guild_id.get();
             let user_id = user.id.get();
 
@@ -145,6 +146,20 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                 .unwrap();
 
             log::write_log(log::LogType::UserDBRemove);
+
+            // Send leave message if channel is set in server settings
+            let leave_channel_id = sqlx::query!("SELECT member_leave_channel_id FROM guild_settings WHERE guild_id = ?", guild_id)
+                .fetch_one(&data.database)
+                .await
+                .unwrap()
+                .member_leave_channel_id;
+
+            if leave_channel_id.is_some() {
+                let channel_id = serenity::ChannelId::new(leave_channel_id.unwrap());
+                let msg = serenity::CreateMessage::new().content(format!("***{} has left the server.***", user.name));
+
+                channel_id.send_message(&ctx, msg).await.unwrap();
+            }
         },
 
         serenity::FullEvent::GuildMemberUpdate { new, .. } => {
@@ -213,6 +228,7 @@ async fn main() {
                 misc::tea(),
                 misc::cake(),
                 welcome::welcome(),
+                welcome::setleavechannel(),
                 mtg::mtg(),
                 stats::stats(),
                 stats::serverstats(),

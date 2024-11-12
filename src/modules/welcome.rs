@@ -110,6 +110,39 @@ pub async fn setchannel(
     Ok(())
 }
 
+/// Set channel to send member leave notifications.
+#[poise::command(
+    slash_command,
+    required_permissions = "MANAGE_CHANNELS"
+)]
+pub async fn setleavechannel(
+    ctx: Context<'_>,
+    channel: Option<serenity::Channel>
+) -> Result<(), Error> {
+    let guild_id = ctx.guild_id().unwrap().get();
+
+    // Set the channel to send leave announcements to
+    if channel.is_some() {
+        let channel_id = channel.as_ref().unwrap().id().get();
+
+        sqlx::query!("UPDATE guild_settings SET member_leave_channel_id = ? WHERE guild_id = ?", channel_id, guild_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+
+        ctx.say(format!("Now sending a message when a server member leaves to {}!", channel.unwrap())).await?;
+    } else {
+        sqlx::query!("UPDATE guild_settings SET member_leave_channel_id = NULL WHERE guild_id = ?", guild_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+
+        ctx.say("No longer announcing when a server member leaves!").await?;
+    }
+
+    Ok(())
+}
+
 //--------------------
 // Function library
 //--------------------
