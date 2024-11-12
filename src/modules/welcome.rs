@@ -113,7 +113,8 @@ pub async fn setchannel(
 /// Set channel to send member leave notifications.
 #[poise::command(
     slash_command,
-    required_permissions = "MANAGE_CHANNELS"
+    required_permissions = "MANAGE_CHANNELS",
+    guild_only,
 )]
 pub async fn setleavechannel(
     ctx: Context<'_>,
