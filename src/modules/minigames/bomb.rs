@@ -27,7 +27,7 @@ pub struct ActiveBomb {
 )]
 pub async fn bomb(
     ctx: Context<'_>,
-    target: serenity::User
+    #[description = "The user you'd like to bomb."] target: serenity::User
 ) -> Result<(), Error> {
     // Don't allow attacking self
     if &target == ctx.author() {

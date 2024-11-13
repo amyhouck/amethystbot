@@ -109,9 +109,10 @@ fn split_quotes_into_pages(guild_quotes: Vec<Quote>) -> Vec<String> {
 )]
 pub async fn addquote(
     ctx: Context<'_>,
-    sayer: serenity::User,
-    #[max_length = 500] quote: String,
-    date: Option<String>
+    #[description = "The person who said the quote."] sayer: serenity::User,
+    #[max_length = 500]
+    #[description = "The quote to record."] quote: String,
+    #[description = "Optionally add a date for the quote."] date: Option<String>
 ) -> Result<(), Error> {
     // Build quote then insert
     let timestamp = if date.is_some() {
@@ -176,9 +177,9 @@ pub async fn addquote(
 )]
 pub async fn quote(
     ctx: Context<'_>,
-    id: Option<u32>,
-    user: Option<serenity::User>,
-    text: Option<String>,
+    #[description = "Search for a specific quote by ID."] id: Option<u32>,
+    #[description = "Grab a random quote said by a user."] user: Option<serenity::User>,
+    #[description = "Grab a quote that contains the given text."] text: Option<String>,
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
 
@@ -218,7 +219,7 @@ pub async fn quote(
 )]
 pub async fn delquote(
     ctx: Context<'_>,
-    id: u32
+    #[description = "The ID of the quote to delete."] id: u32
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
 
@@ -258,7 +259,7 @@ pub async fn delquote(
 )]
 pub async fn setquoterole(
     ctx: Context<'_>,
-    role: Option<serenity::Role>
+    #[description = "The role required to add or delete quotes."] role: Option<serenity::Role>
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
 

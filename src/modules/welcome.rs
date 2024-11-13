@@ -18,7 +18,7 @@ pub async fn welcome(_: Context<'_>) -> Result<(), Error> {
 )]
 pub async fn setmessage(
     ctx: Context<'_>,
-    message: Option<String>,
+    #[description = "The message to send when a user joins."] message: Option<String>,
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
 
@@ -51,7 +51,7 @@ pub async fn setmessage(
 )]
 pub async fn setimage(
     ctx: Context<'_>,
-    image_url: Option<String>,
+    #[description = "The URL of an image to include with the welcome message."] image_url: Option<String>,
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
 
@@ -83,7 +83,7 @@ pub async fn setimage(
 )]
 pub async fn setchannel(
     ctx: Context<'_>,
-    channel: Option<serenity::Channel>
+    #[description = "The channel to send the welcome messages to."] channel: Option<serenity::Channel>
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
 
@@ -118,7 +118,7 @@ pub async fn setchannel(
 )]
 pub async fn setleavechannel(
     ctx: Context<'_>,
-    channel: Option<serenity::Channel>
+    #[description = "The channel to send a message when a user leaves the server."] channel: Option<serenity::Channel>
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
 

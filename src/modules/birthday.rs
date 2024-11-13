@@ -314,7 +314,8 @@ pub async fn list(
     ctx: Context<'_>,
 
     #[min = 1_u8]
-    #[max = 12_u8] month: Option<u8>
+    #[max = 12_u8] 
+    #[description = "Optionally only list birthdays for a specific month."] month: Option<u8>
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
 

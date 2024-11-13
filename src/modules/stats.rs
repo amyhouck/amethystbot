@@ -10,7 +10,7 @@ use poise::serenity_prelude as serenity;
 )]
 pub async fn stats(
     ctx: Context<'_>,
-    user: Option<serenity::User>
+    #[description = "The user you want stats for."] user: Option<serenity::User>
 ) -> Result<(), Error> {
     // Get user id and check database
     let user = match user {

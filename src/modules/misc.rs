@@ -11,7 +11,7 @@ use rand::{Rng, thread_rng};
 )]
 pub async fn slap(
     ctx: Context<'_>,
-    mut victim: serenity::User
+    #[description = "The user you'd like to slap."] mut victim: serenity::User
 ) -> Result<(), Error> {
     // All hail RNG
     let random_gif = {
@@ -77,7 +77,7 @@ pub async fn slap(
 )]
 pub async fn cookie(
     ctx: Context<'_>,
-    victim: serenity::User
+    #[description = "The user you'd like to cookie."] victim: serenity::User
 ) -> Result<(), Error> {
     let embed_image = if ctx.author() == &victim {
         "https://media.tenor.com/TJREb7mszbwAAAAd/cat-cookies-cookies.gif"
@@ -124,7 +124,7 @@ pub async fn cookie(
 )]
 pub async fn tea(
     ctx: Context<'_>,
-    victim: serenity::User
+    #[description = "The user you'd like to tea."] victim: serenity::User
 ) -> Result<(), Error> {
     let embed_gif = {
         let mut rng = thread_rng();
@@ -171,7 +171,7 @@ pub async fn tea(
 )]
 pub async fn cake(
     ctx: Context<'_>,
-    victim: serenity::User
+    #[description = "The user you'd like to cake."] victim: serenity::User
 ) -> Result<(), Error> {
     // Praise the RNG
     let gif_id = {

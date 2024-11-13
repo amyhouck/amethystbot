@@ -22,7 +22,7 @@ pub async fn vctracker(_: Context<'_>) -> Result<(), Error> {
 #[poise::command(slash_command)]
 pub async fn ignorechannel(
     ctx: Context<'_>,
-    channel: Option<serenity::Channel>,
+    #[description = "The VC channel to ignore for tracking time."] channel: Option<serenity::Channel>,
 ) -> Result<(), Error> {
     let query_channel = match &channel {
         Some(c) => c.id().get().to_string(),
@@ -53,7 +53,8 @@ pub async fn ignorechannel(
 )]
 pub async fn vctop(
     ctx: Context<'_>,
-    #[rename = "type"] leaderboard_type: Option<VCTopType>,
+    #[rename = "type"]
+    #[description = "The timeframe of the leaderboard you want to see."] leaderboard_type: Option<VCTopType>,
 ) -> Result<(), Error> {
     let leaderboard_type = leaderboard_type.unwrap_or(VCTopType::All);
 

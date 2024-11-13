@@ -297,9 +297,11 @@ pub async fn mtg(_: Context<'_>) -> Result<(), Error> {
 #[poise::command(slash_command)]
 pub async fn card(
     ctx: Context<'_>,
-    name: Option<String>,
-    #[max_length = 3] set: Option<String>,
-    #[max_length = 4] collector_num: Option<i64>,
+    #[description = "The full or partial name of the card."] name: Option<String>,
+    #[max_length = 3]
+    #[description = "The set code for the card"] set: Option<String>,
+    #[max_length = 4]
+    #[description = "The collector number of the card."] collector_num: Option<i64>,
 ) -> Result<(), Error> {
     // Validate paramters
     valid_parameters(&name, &set, &collector_num)?;
