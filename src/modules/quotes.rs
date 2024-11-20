@@ -235,7 +235,7 @@ pub async fn delquote(
     }
 
     // Delete quote
-    let delete_query = sqlx::query!("DELETE FROM quotes WHERE guild_id = ? AND quote_id = ?", ctx.guild_id().unwrap().get(), id)
+    let delete_query = sqlx::query!("DELETE FROM quotes WHERE guild_id = ? AND quote_id = ?", guild_id, id)
         .execute(&ctx.data().database)
         .await;
 
@@ -246,6 +246,12 @@ pub async fn delquote(
             ctx.say("There was an error trying to delete the quote!").await.unwrap()
         }
     };
+
+    // Adjust quote IDs
+    sqlx::query!("UPDATE quotes SET quote_id = quote_id - 1 WHERE guild_id = ? AND quote_id > ?", guild_id, id)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
 
     Ok(())
 }
