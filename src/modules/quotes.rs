@@ -73,7 +73,7 @@ fn split_quotes_into_pages(guild_quotes: Vec<Quote>) -> Vec<String> {
     let mut page_content = String::new();
     let mut pages: Vec<String> = Vec::new();
     for (i, quote) in guild_quotes.iter().enumerate() {
-        page_content = format!("{page_content}**{}.** \"{}\" \n*\\- {} {}* (ID: {})\n\n",
+        page_content = format!("{page_content}**{}.** {} \n*\\- {} {}* (ID: {})\n\n",
             i + 1,
             quote.quote,
             quote.sayer_display_name,
