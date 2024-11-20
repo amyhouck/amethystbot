@@ -20,6 +20,7 @@ const MONTHS: [&str; 12] = ["January", "February", "March", "April", "May", "Jun
 //--------------------
 // Function library
 //--------------------
+// Check if birthday channel is set before running a command
 async fn bday_channel_check(ctx: Context<'_>) -> Result<bool, Error> {
     let guild_id = ctx.guild_id().unwrap().get();
 
@@ -38,6 +39,30 @@ async fn bday_channel_check(ctx: Context<'_>) -> Result<bool, Error> {
             Ok(false)
         }
     }
+}
+
+// Determine which username to use
+async fn determine_username (
+    ctx: &serenity::Context,
+    database: &sqlx::MySqlPool,
+    bday_nick: Option<String>,
+    guild_id: u64,
+    user_id: u64
+) -> String {
+    if bday_nick.is_none() {
+        // Try to grab from user row
+        let user_display_name = sqlx::query!("SELECT display_name FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+            .fetch_optional(database)
+            .await
+            .unwrap();
+
+        match user_display_name {
+            Some(record) => return record.display_name,
+            None => return serenity::UserId::new(user_id).to_user(&ctx).await.unwrap().name
+        }
+    }
+
+    bday_nick.unwrap()
 }
 
 //--------------------
@@ -396,8 +421,9 @@ pub async fn birthday_check(ctx: &serenity::Context, data: &Data) {
 
             for birthday in guild_birthdays {
                 if birthday.birthmonth == current_date[0] && birthday.birthday == current_date[1] {
+                    let username = determine_username(ctx, &data.database, birthday.nickname, birthday.guild_id, birthday.user_id).await;
+
                     // Take care of the birthday message
-                    let username = birthday.nickname.unwrap_or(serenity::UserId::new(birthday.user_id).to_user(&ctx).await.unwrap().name);
                     let bday_msg = format!("Happy birthday, {username}! :birthday: We hope you have a great day!");
 
                     let random_gif = {
@@ -428,9 +454,12 @@ pub async fn birthday_check(ctx: &serenity::Context, data: &Data) {
                     // Remove birthday role if member has it
                     if guild.birthday_role.is_some() {
                         let birthday_guild = serenity::GuildId::new(guild.guild_id);
-                        let birthday_member = birthday_guild.member(&ctx, serenity::UserId::new(birthday.user_id)).await.unwrap();
+                        let birthday_member = birthday_guild.member(&ctx, serenity::UserId::new(birthday.user_id)).await;
 
-                        birthday_member.remove_role(&ctx, serenity::RoleId::new(guild.birthday_role.unwrap())).await.unwrap();
+                        match birthday_member {
+                            Ok(m) => m.remove_role(&ctx, serenity::RoleId::new(guild.birthday_role.unwrap())).await.unwrap(),
+                            Err(e) => println!("{:?}", e)
+                        }
                     }
                 }
             }
