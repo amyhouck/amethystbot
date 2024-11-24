@@ -1,7 +1,8 @@
 use crate::{Data, Context, Error};
+use crate::customgifs::{grab_custom_gifs, GIFType};
 use poise::serenity_prelude as serenity;
 use chrono::Utc;
-use rand::{Rng, thread_rng};
+use rand::{thread_rng, Rng};
 
 //--------------------
 // Data
@@ -407,17 +408,18 @@ pub async fn birthday_check(ctx: &serenity::Context, data: &Data) {
 
         // Loop the registered guilds
         for guild in registered_guild_channels {
-            // Check for birthday channel
+            // Check for birthday channel; If none, skip everything
             if guild.birthday_channel.is_none() {
                 continue;
             }
             let channel_id = serenity::ChannelId::new(guild.birthday_channel.unwrap());
 
-            // Select birthdays
             let guild_birthdays = sqlx::query!("SELECT * FROM birthday WHERE guild_id = ?", guild.guild_id)
                 .fetch_all(&data.database)
                 .await
                 .unwrap();
+
+            let birthday_gifs = grab_custom_gifs(&data.database, GIFType::Birthday, guild.guild_id).await;
 
             for birthday in guild_birthdays {
                 if birthday.birthmonth == current_date[0] && birthday.birthday == current_date[1] {
@@ -427,15 +429,19 @@ pub async fn birthday_check(ctx: &serenity::Context, data: &Data) {
                     let bday_msg = format!("Happy birthday, {username}! :birthday: We hope you have a great day!");
 
                     let random_gif = {
-                        let mut rng = thread_rng();
-                        rng.gen_range(0..data.birthday_gifs.len())
+                        if birthday_gifs.len() > 0 {
+                            let mut rng = thread_rng();
+                            &birthday_gifs[rng.gen_range(0..birthday_gifs.len())].gif_url
+                        } else {
+                            ""
+                        }
                     };
 
                     let embed = serenity::CreateEmbed::new()
                         .colour(0xFF0095)
                         .thumbnail("https://media.istockphoto.com/vectors/birthday-cake-vector-isolated-vector-id901911608?k=6&m=901911608&s=612x612&w=0&h=d6v27h_mYUaUe0iSrtoX5fTw-2wGVIY4UTbQPeI-T5k=")
                         .title(bday_msg)
-                        .image(&data.birthday_gifs[random_gif]);
+                        .image(random_gif);
 
                     let msg = serenity::CreateMessage::new()
                         .content("@everyone :birthday:")

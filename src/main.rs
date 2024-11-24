@@ -127,6 +127,8 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             let channel = serenity::ChannelId::new(welcome.channel_id.unwrap());
 
             channel.send_message(&ctx, serenity::CreateMessage::new().embed(welcome_embed)).await.unwrap();
+
+            user_table_check(&data.database, &ctx.http, new_member.guild_id, &new_member.user).await;
         },
 
         serenity::FullEvent::GuildMemberRemoval { guild_id, user, ..} => {
@@ -239,6 +241,10 @@ async fn main() {
                 quotes::delquote(),
                 quotes::setquoterole(),
                 quotes::listquotes(),
+                customgifs::addgif(),
+                customgifs::delgif(),
+                customgifs::listgifs(),
+                customgifs::setgifrole(),
 
                 minigames::bomb::bomb(),
             ],

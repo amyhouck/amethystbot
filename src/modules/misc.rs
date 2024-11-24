@@ -1,5 +1,6 @@
 use crate::{Context, Error};
 use crate::data::user_table_check;
+use crate::customgifs::{grab_custom_gifs, GIFType};
 use poise::serenity_prelude as serenity;
 use rand::{Rng, thread_rng};
 
@@ -14,13 +15,20 @@ pub async fn slap(
     #[description = "The user you'd like to slap."] mut victim: serenity::User
 ) -> Result<(), Error> {
     // All hail RNG
-    let random_gif = {
-        let mut rng = thread_rng();
+    let gif_type = if &victim == ctx.author() {
+        GIFType::SlapSelf
+    } else {
+        GIFType::Slap
+    };
 
-        if &victim == ctx.author() {
-            &ctx.data().self_slap_gifs[rng.gen_range(0..ctx.data().self_slap_gifs.len())]
+    let slap_gifs = grab_custom_gifs(&ctx.data().database, gif_type, ctx.guild_id().unwrap().get()).await;
+
+    let random_gif = {
+        if slap_gifs.len() > 0 {
+            let mut rng = thread_rng();
+            &slap_gifs[rng.gen_range(0..slap_gifs.len())].gif_url
         } else {
-            &ctx.data().slap_gifs[rng.gen_range(0..ctx.data().slap_gifs.len())]
+            ""
         }
     };
 
@@ -79,10 +87,21 @@ pub async fn cookie(
     ctx: Context<'_>,
     #[description = "The user you'd like to cookie."] victim: serenity::User
 ) -> Result<(), Error> {
-    let embed_image = if ctx.author() == &victim {
-        "https://media.tenor.com/TJREb7mszbwAAAAd/cat-cookies-cookies.gif"
+    let gif_type = if &victim == ctx.author() {
+        GIFType::CookieSelf
     } else {
-        "https://media.tenor.com/Neg3VGfuntMAAAAC/spongebob-cookies.gif"
+        GIFType::Cookie
+    };
+
+    let cookie_gifs = grab_custom_gifs(&ctx.data().database, gif_type, ctx.guild_id().unwrap().get()).await;
+
+    let embed_image = {
+        if cookie_gifs.len() > 0 {
+            let mut rng = thread_rng();
+            &cookie_gifs[rng.gen_range(0..cookie_gifs.len())].gif_url
+        } else {
+            ""
+        }
     };
 
     let embed_msg = if ctx.author() == &victim {
@@ -126,10 +145,15 @@ pub async fn tea(
     ctx: Context<'_>,
     #[description = "The user you'd like to tea."] victim: serenity::User
 ) -> Result<(), Error> {
+    let tea_gifs = grab_custom_gifs(&ctx.data().database, GIFType::Tea, ctx.guild_id().unwrap().get()).await;
+
     let embed_gif = {
-        let mut rng = thread_rng();
-        let gif_id = rng.gen_range(0..ctx.data().tea_gifs.len());
-        &ctx.data().tea_gifs[gif_id]
+        if tea_gifs.len() > 0 {
+            let mut rng = thread_rng();
+            &tea_gifs[rng.gen_range(0..tea_gifs.len())].gif_url
+        } else {
+            ""
+        }
     };
 
     let embed_msg = if &victim == ctx.author() {
@@ -174,10 +198,7 @@ pub async fn cake(
     #[description = "The user you'd like to cake."] victim: serenity::User
 ) -> Result<(), Error> {
     // Praise the RNG
-    let gif_id = {
-        let mut rng = thread_rng();
-        rng.gen_range(0..ctx.data().cake_gifs.len())
-    };
+    let cake_gifs = grab_custom_gifs(&ctx.data().database, GIFType::Cake, ctx.guild_id().unwrap().get()).await;
 
     let glados = {
         let mut rng = thread_rng();
@@ -188,7 +209,12 @@ pub async fn cake(
     let embed_gif = if glados == 9 {
         "https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif"
     } else {
-        &ctx.data().cake_gifs[gif_id]
+        if cake_gifs.len() > 0 {
+            let mut rng = thread_rng();
+            &cake_gifs[rng.gen_range(0..cake_gifs.len())].gif_url
+        } else {
+            ""
+        }
     };
 
     let embed_msg = if glados == 9 {
