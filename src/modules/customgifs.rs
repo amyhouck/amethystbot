@@ -37,6 +37,11 @@ pub struct CustomGif {
     pub gif_url: String
 }
 
+pub enum GIFDBQueryType {
+    Normal,
+    SingleRandom
+}
+
 //--------------------
 // Functions
 //--------------------
@@ -70,12 +75,24 @@ fn create_gif_pages(gifs: Vec<CustomGif>) -> Vec<String> {
 pub async fn grab_custom_gifs(
     database: &sqlx::MySqlPool,
     gif_type: GIFType,
-    guild_id: u64
+    guild_id: u64,
+    query_type: GIFDBQueryType
 ) -> Vec<CustomGif> {
-    sqlx::query_as!(CustomGif, "SELECT * FROM custom_gifs WHERE guild_id = ? AND gif_type = ?", guild_id, gif_type.to_string())
-        .fetch_all(database)
-        .await
-        .unwrap()
+    // Keep using query_as!() and .fetch_all() to keep the Vector type and not have to deal with whether it's a single item or not in this function.
+    match query_type {
+        GIFDBQueryType::Normal => { 
+            sqlx::query_as!(CustomGif, "SELECT * FROM custom_gifs WHERE guild_id = ? AND gif_type = ?", guild_id, gif_type.to_string())
+                .fetch_all(database)
+                .await
+                .unwrap()
+        },
+        GIFDBQueryType::SingleRandom => {
+            sqlx::query_as!(CustomGif, "SELECT * FROM custom_gifs WHERE guild_id = ? AND gif_type = ? ORDER BY RAND() LIMIT 1", guild_id, gif_type.to_string())
+                .fetch_all(database)
+                .await
+                .unwrap()
+        }
+    }
 }
 
 // Check if GIF commands require roles
@@ -206,16 +223,13 @@ pub async fn listgifs(
     gif_type: GIFType
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
-    let gif_type = gif_type.to_string();
+    let gif_type_string = gif_type.to_string();
 
     // Grab relevant GIFs, return error if empty vector
-    let gifs: Vec<CustomGif> = sqlx::query_as!(CustomGif, "SELECT * FROM custom_gifs WHERE guild_id = ? AND gif_type = ?", guild_id, gif_type)
-        .fetch_all(&ctx.data().database)
-        .await
-        .unwrap();
+    let gifs = grab_custom_gifs(&ctx.data().database, gif_type, guild_id, GIFDBQueryType::Normal).await;
 
     if gifs.is_empty() {
-        return Err(format!("No GIFs were found under \"{gif_type}\"").into());
+        return Err(format!("No GIFs were found under \"{gif_type_string}\"").into());
     }
 
     // Create GIF embed
@@ -234,7 +248,7 @@ pub async fn listgifs(
     let embed = serenity::CreateEmbed::new()
         .description(&gif_pages[page_num])
         .colour(0x0b4a6f)
-        .title(format!("Custom GIFs for \"{gif_type}\""));
+        .title(format!("Custom GIFs for \"{gif_type_string}\""));
 
     ctx.send(poise::CreateReply::default()
         .embed(embed)
@@ -262,7 +276,7 @@ pub async fn listgifs(
                         .embed(serenity::CreateEmbed::new()
                             .description(&gif_pages[page_num])
                             .colour(0x0b4a6f)
-                            .title(format!("Custom GIFs for \"{gif_type}\""))
+                            .title(format!("Custom GIFs for \"{gif_type_string}\""))
                         )
                 )
             ).await?;

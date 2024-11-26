@@ -1,5 +1,5 @@
 use crate::{Data, Context, Error};
-use crate::customgifs::{grab_custom_gifs, GIFType};
+use crate::customgifs::{grab_custom_gifs, GIFType, GIFDBQueryType};
 use poise::serenity_prelude as serenity;
 use chrono::Utc;
 use rand::{thread_rng, Rng};
@@ -419,7 +419,7 @@ pub async fn birthday_check(ctx: &serenity::Context, data: &Data) {
                 .await
                 .unwrap();
 
-            let birthday_gifs = grab_custom_gifs(&data.database, GIFType::Birthday, guild.guild_id).await;
+            let birthday_gifs = grab_custom_gifs(&data.database, GIFType::Birthday, guild.guild_id, GIFDBQueryType::Normal).await;
 
             for birthday in guild_birthdays {
                 if birthday.birthmonth == current_date[0] && birthday.birthday == current_date[1] {
