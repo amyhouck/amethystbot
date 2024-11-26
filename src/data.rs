@@ -65,8 +65,6 @@ pub async fn user_table_check(database: &sqlx::MySqlPool, http: &serenity::Http,
     // If the display names don't match, update database
     if db_user.display_name.unwrap() != display_name {
         alter_db_display_name(database, guild_id.get(), user.id.get(), display_name).await;
-
-        log::write_log(log::LogType::UserDBNameChange { guild_id: guild_id.get(), user_id: user.id.get() });
     }
 }
 
