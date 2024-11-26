@@ -235,51 +235,57 @@ pub async fn listgifs(
     // Create GIF embed
     let gif_pages = create_gif_pages(gifs);
     let mut page_num = 0;
-    let ctx_id = ctx.id();
-    let prev_id = format!("{ctx_id}prev");
-    let next_id = format!("{ctx_id}next");
-
-    let buttons: Vec<serenity::CreateButton> = vec![
-        serenity::CreateButton::new(&prev_id).label("Previous"),
-        serenity::CreateButton::new(&next_id).label("Next")
-    ];
-    let buttons = serenity::CreateActionRow::Buttons(buttons);
 
     let embed = serenity::CreateEmbed::new()
         .description(&gif_pages[page_num])
         .colour(0x0b4a6f)
         .title(format!("Custom GIFs for \"{gif_type_string}\""));
 
-    ctx.send(poise::CreateReply::default()
-        .embed(embed)
-        .components(vec![buttons])
-    ).await?;
+    let mut reply_obj = poise::CreateReply::default()
+        .embed(embed);
 
-    // Handle button interactions
-    while let Some(press) = serenity::collector::ComponentInteractionCollector::new(ctx)
-        .filter(move |press| press.data.custom_id.starts_with(&ctx_id.to_string()))
-        .timeout(std::time::Duration::from_secs(1800))
-        .await {
-            if press.data.custom_id == prev_id {
-                page_num = page_num.checked_sub(1).unwrap_or(gif_pages.len() - 1)
-            } else if press.data.custom_id == next_id {
-                page_num += 1;
-                if page_num >= gif_pages.len() { page_num = 0; }
-            } else {
-                continue;
-            }
+    if gif_pages.len() > 1 {
+        let ctx_id = ctx.id();
+        let prev_id = format!("{ctx_id}prev");
+        let next_id = format!("{ctx_id}next");
 
-            press.create_response(
-                ctx.serenity_context(),
-                serenity::CreateInteractionResponse::UpdateMessage(
-                    serenity::CreateInteractionResponseMessage::new()
-                        .embed(serenity::CreateEmbed::new()
-                            .description(&gif_pages[page_num])
-                            .colour(0x0b4a6f)
-                            .title(format!("Custom GIFs for \"{gif_type_string}\""))
-                        )
-                )
-            ).await?;
+        let buttons: Vec<serenity::CreateButton> = vec![
+            serenity::CreateButton::new(&prev_id).label("Previous"),
+            serenity::CreateButton::new(&next_id).label("Next")
+        ];
+        let buttons = serenity::CreateActionRow::Buttons(buttons);
+
+        reply_obj = reply_obj.components(vec![buttons]);
+        ctx.send(reply_obj).await?;
+
+        // Handle button interactions
+        while let Some(press) = serenity::collector::ComponentInteractionCollector::new(ctx)
+            .filter(move |press| press.data.custom_id.starts_with(&ctx_id.to_string()))
+            .timeout(std::time::Duration::from_secs(1800))
+            .await {
+                if press.data.custom_id == prev_id {
+                    page_num = page_num.checked_sub(1).unwrap_or(gif_pages.len() - 1)
+                } else if press.data.custom_id == next_id {
+                    page_num += 1;
+                    if page_num >= gif_pages.len() { page_num = 0; }
+                } else {
+                    continue;
+                }
+
+                press.create_response(
+                    ctx.serenity_context(),
+                    serenity::CreateInteractionResponse::UpdateMessage(
+                        serenity::CreateInteractionResponseMessage::new()
+                            .embed(serenity::CreateEmbed::new()
+                                .description(&gif_pages[page_num])
+                                .colour(0x0b4a6f)
+                                .title(format!("Custom GIFs for \"{gif_type_string}\""))
+                            )
+                    )
+                ).await?;
+        }
+    } else {
+        ctx.send(reply_obj).await?;
     }
 
     Ok(())
