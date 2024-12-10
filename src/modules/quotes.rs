@@ -1,4 +1,4 @@
-use crate::{data::determine_display_username, Context, Error};
+use crate::{data::{determine_display_username, user_table_check}, Context, Error};
 use poise::serenity_prelude as serenity;
 
 //--------------------
@@ -157,6 +157,22 @@ pub async fn addquote(
         .await
         .unwrap();
 
+    let query = format!("UPDATE users SET quotes_added = quotes_added + 1 WHERE guild_id = {} AND user_id = {};
+        UPDATE users SET times_quoted = times_quoted + 1 WHERE guild_id = {} AND user_id = {}",
+        quote_data.guild_id,
+        quote_data.adder_id,
+        quote_data.guild_id,
+        quote_data.sayer_id
+    );
+
+    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), ctx.author()).await;
+    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &sayer).await;
+
+    sqlx::raw_sql(&query)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
     // Build embed then post success
     let quote_embed = build_single_quote_embed(ctx.http(), quote_data).await;
 
@@ -224,15 +240,15 @@ pub async fn delquote(
     let guild_id = ctx.guild_id().unwrap().get();
 
     // Check if quote exists first
-    let exist = sqlx::query!("SELECT COUNT(quote_id) AS count FROM quotes WHERE guild_id = ? AND quote_id = ?", guild_id, id)
-        .fetch_one(&ctx.data().database)
+    let quote = sqlx::query_as!(Quote, "SELECT * FROM quotes WHERE guild_id = ? AND quote_id = ?", guild_id, id)
+        .fetch_optional(&ctx.data().database)
         .await
-        .unwrap()
-        .count;
+        .unwrap();
 
-    if exist == 0 {
-        return Err("No quote saved with that ID!".into());
-    }
+    let quote = match quote {
+        Some(q) => q,
+        None => return Err("No quote saved with that ID!".into())
+    };
 
     // Delete quote
     let delete_query = sqlx::query!("DELETE FROM quotes WHERE guild_id = ? AND quote_id = ?", guild_id, id)
@@ -249,6 +265,23 @@ pub async fn delquote(
 
     // Adjust quote IDs
     sqlx::query!("UPDATE quotes SET quote_id = quote_id - 1 WHERE guild_id = ? AND quote_id > ?", guild_id, id)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
+
+    // Alter quote stats
+    let query = format!("UPDATE users SET quotes_added = quotes_added - 1 WHERE guild_id = {} AND user_id = {};
+        UPDATE users SET times_quoted = times_quoted - 1 WHERE guild_id = {} AND user_id = {}",
+        quote.guild_id,
+        quote.adder_id,
+        quote.guild_id,
+        quote.sayer_id
+    );
+
+    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &serenity::UserId::new(quote.adder_id).to_user(&ctx).await.unwrap()).await; // This is ugly and needs to change
+    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &serenity::UserId::new(quote.sayer_id).to_user(&ctx).await.unwrap()).await; // This is also ugly and needs to change
+
+    sqlx::raw_sql(&query)
         .execute(&ctx.data().database)
         .await
         .unwrap();

@@ -45,7 +45,7 @@ pub async fn stats(
         user_data.vctrack_total_time % 60,
     );
 
-    let embed_desc = format!("**Time spent in VC:** {12}\n\n**Cookies sent:** {0}\n**Cookies received:** {1}\n\n**Cakes sent:** {2}\n**Cakes received:** {3}\n**Times GLaDOSed:** {11}\n\n**Cups of tea given:** {6}\n**Cups of tea received:** {7}\n\n**People slapped:** {4}\n**Slaps received:** {5}\n\n**Bombs sent:** {8}\n**Bombs defused:** {9}\n**Times exploded:** {10}",
+    let embed_desc = format!("**Time spent in VC:** {12}\n\n**Cookies sent:** {0}\n**Cookies received:** {1}\n\n**Cakes sent:** {2}\n**Cakes received:** {3}\n**Times GLaDOSed:** {11}\n\n**Cups of tea given:** {6}\n**Cups of tea received:** {7}\n\n**People slapped:** {4}\n**Slaps received:** {5}\n\n**Times quoted:** {13}\n**Quotes added:** {14}\n\n**Bombs sent:** {8}\n**Bombs defused:** {9}\n**Times exploded:** {10}",
         user_data.cookie_sent,
         user_data.cookie_received,
         user_data.cake_sent,
@@ -59,6 +59,8 @@ pub async fn stats(
         user_data.bomb_failed,
         user_data.cake_glados,
         vctime,
+        user_data.times_quoted,
+        user_data.quotes_added
     );
 
     let stat_embed = serenity::CreateEmbed::new()
