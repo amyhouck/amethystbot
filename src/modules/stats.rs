@@ -78,7 +78,7 @@ pub async fn stats(
     member_cooldown = 5
 )]
 pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
-    // Query all data from user stats for the server
+    // `users` table data
     let guild_id = ctx.guild_id().unwrap().get();
 
     let server_data = sqlx::query!("SELECT * FROM users WHERE guild_id = ?", guild_id)
@@ -86,12 +86,20 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
         .await
         .unwrap();
 
-    // If no data, return msg. Else combine into server struct
+    // If no data, return msg.
     if server_data.is_empty() {
         ctx.say("This server does not have any stats available yet!").await?;
         return Ok(());
     }
 
+    // `quotes` table data
+    let quote_count = sqlx::query!("SELECT COUNT(quote_id) AS count FROM quotes WHERE guild_id = ?", guild_id)
+        .fetch_one(&ctx.data().database)
+        .await
+        .unwrap()
+        .count;
+
+    // Server stats struct construction
     let mut server_stats = data::ServerStats::default();
     let mut raw_vc_time = 0u32;
     for record in server_data {
@@ -114,7 +122,7 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
     );
 
     // Build and send stats embed
-    let embed_desc = format!("**Total VC time:** {8}\n\n**Cookies sent:** {0}\n**Cakes sent:** {1}\n**Tea sent:** {2}\n**Slaps sent:** {3}\n**GLaDOS appearances:** {7}\n\n**Bombs sent:** {4}\n**Bombs defused:** {5}\n**Bombs exploded:** {6}",
+    let embed_desc = format!("**Total VC time:** {formatted_vc_time}\n\n**Cookies sent:** {0}\n**Cakes sent:** {1}\n**Tea sent:** {2}\n**Slaps sent:** {3}\n**GLaDOS appearances:** {7}\n**Total quotes:** {quote_count}\n\n**Bombs sent:** {4}\n**Bombs defused:** {5}\n**Bombs exploded:** {6}",
         server_stats.cookie_sent,
         server_stats.cake_sent,
         server_stats.tea_sent,
@@ -123,7 +131,6 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
         server_stats.bomb_defused,
         server_stats.bomb_failed,
         server_stats.glados_appearances,
-        formatted_vc_time
     );
 
     let mut embed = serenity::CreateEmbed::new()
