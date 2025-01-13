@@ -44,7 +44,7 @@ pub async fn slap(
     };
 
     if ctx.guild_id().unwrap().get() == 545745915151908865 && funny == 3 {
-        victim_id = 811402226643632159;
+        victim_id = 499008692503707658;
         embed_msg = format!("{} tried to slap {} but hit <@{}> instead!", ctx.author(), victim, victim_id);
         victim = serenity::UserId::from(victim_id).to_user(ctx.http()).await.unwrap();
     }
