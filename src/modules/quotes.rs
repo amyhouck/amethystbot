@@ -393,33 +393,3 @@ pub async fn listquotes(
 
     Ok(())
 }
-
-#[poise::command(slash_command, guild_only, owners_only)]
-pub async fn set_quote_stats(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.defer().await?;
-    let guild_id = ctx.guild_id().unwrap().get();
-
-    let quotes: Vec<Quote> = sqlx::query_as!(Quote, "SELECT * FROM quotes WHERE guild_id = ?", guild_id)
-        .fetch_all(&ctx.data().database)
-        .await
-        .unwrap();
-
-    for quote in quotes {
-        let query = format!("UPDATE users SET quotes_added = quotes_added + 1 WHERE guild_id = {} AND user_id = {};
-            UPDATE users SET times_quoted = times_quoted + 1 WHERE guild_id = {} AND user_id = {}",
-            guild_id,
-            quote.adder_id,
-            guild_id,
-            quote.sayer_id
-        );
-
-        sqlx::raw_sql(&query)
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
-    }
-
-    ctx.say("Completed").await;
-
-    Ok(())
-}

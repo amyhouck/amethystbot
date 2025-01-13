@@ -248,8 +248,6 @@ async fn main() {
                 customgifs::setgifrole(),
 
                 minigames::bomb::bomb(),
-                
-                quotes::set_quote_stats(),
             ],
             pre_command: |ctx| {
                 Box::pin(async move {
