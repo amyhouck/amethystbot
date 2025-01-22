@@ -40,7 +40,7 @@ pub async fn slap(
 
     let funny = {
         let mut rng = thread_rng();
-        rng.gen_range(1..=5)
+        rng.gen_range(1..=15)
     };
 
     if ctx.guild_id().unwrap().get() == 545745915151908865 && funny == 3 {
@@ -240,32 +240,6 @@ pub async fn cake(
             .execute(&ctx.data().database)
             .await
             .unwrap();
-    }
-
-    Ok(())
-}
-
-/// Platinum...
-#[poise::command(
-    slash_command,
-    guild_only,
-)]
-pub async fn dictionary(ctx: Context<'_>) -> Result<(), Error> {
-    let count = sqlx::query!("SELECT * FROM dictionary")
-        .fetch_one(&ctx.data().database)
-        .await
-        .unwrap()
-        .count;
-
-    if ctx.author().id.get() == 324551956737556501 {
-        sqlx::query!("UPDATE dictionary SET count = count + 1")
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
-
-        ctx.say(format!("<@360508963260727296> needs a dictionary! He has needed one {} time(s)!", count + 1)).await?;
-    } else {
-        ctx.say(format!("<@360508963260727296> has needed a dictionary {count} time(s)!")).await?;
     }
 
     Ok(())
