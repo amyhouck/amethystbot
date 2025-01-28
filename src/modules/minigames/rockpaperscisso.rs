@@ -21,6 +21,20 @@ impl ToString for RPSChoices {
     }
 }
 
+struct RPSPlayer {
+    id: u64,
+    choice: RPSChoices,
+}
+
+impl RPSPlayer {
+    fn new(id: u64) -> RPSPlayer {
+        Self {
+            id,
+            choice: RPSChoices::None
+        }
+    }
+}
+
 // Functions
 fn determine_winner_result(
     challenger_choice: &RPSChoices,
@@ -68,8 +82,10 @@ pub async fn rps(
     let guild_id = ctx.guild_id().unwrap().get();
 
     // Setup game data
-    let mut challenger_choice = RPSChoices::None;
-    let mut victim_choice = RPSChoices::None;
+    let mut rps_game: [RPSPlayer; 2] = [
+        RPSPlayer::new(ctx.author().id.get()),
+        RPSPlayer::new(victim.id.get())
+    ];
 
     // Handle message
     let embed_desc = format!("{}, you have been challenged to Rock, Paper, Scissors!\n\n Players, select a choice below! You have 1 minute!", victim);
@@ -77,8 +93,8 @@ pub async fn rps(
     let rps_embed = serenity::CreateEmbed::new()
         .title("Rock, Paper, Scissors")
         .description(&embed_desc)
-        .field(ctx.author().name.as_str(), challenger_choice.to_string(), true)
-        .field(victim.name.as_str(), victim_choice.to_string(), true)
+        .field(ctx.author().name.as_str(), rps_game[0].choice.to_string(), true)
+        .field(victim.name.as_str(), rps_game[1].choice.to_string(), true)
         .colour(0xFFFFFF);
 
     // Setup interaction data
@@ -114,34 +130,22 @@ pub async fn rps(
         }
 
         // Handle buttons
-        if press.data.custom_id == rock_id {
-            if press.user.id.get() == ctx.author().id.get() {
-                challenger_choice = RPSChoices::Rock;
-            }
+        let player_num: usize = if press.user.id.get() == rps_game[0].id {
+            0
+        } else {
+            1
+        };
 
-            if press.user.id.get() == victim.id.get() {
-                victim_choice = RPSChoices::Rock;
-            }
+        if press.data.custom_id == rock_id {
+            rps_game[player_num].choice = RPSChoices::Rock;
 
             press.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
         } else if press.data.custom_id == paper_id {
-            if press.user.id.get() == ctx.author().id.get() {
-                challenger_choice = RPSChoices::Paper;
-            }
-
-            if press.user.id.get() == victim.id.get() {
-                victim_choice = RPSChoices::Paper;
-            }
+            rps_game[player_num].choice = RPSChoices::Paper;
 
             press.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
         } else if press.data.custom_id == scissors_id {
-            if press.user.id.get() == ctx.author().id.get() {
-                challenger_choice = RPSChoices::Scissors;
-            }
-
-            if press.user.id.get() == victim.id.get() {
-                victim_choice = RPSChoices::Scissors;
-            }
+            rps_game[player_num].choice = RPSChoices::Scissors;
 
             press.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
         } else {
@@ -149,13 +153,13 @@ pub async fn rps(
         }
 
         // Embed handler
-        if challenger_choice != RPSChoices::None && victim_choice != RPSChoices::None {
+        if rps_game[0].choice != RPSChoices::None && rps_game[1].choice != RPSChoices::None {
             // Determine winner to update
-            let winner = determine_winner_result(&challenger_choice, &victim_choice);
+            let winner = determine_winner_result(&rps_game[0].choice, &rps_game[1].choice);
             
             let embed_desc = match winner {
-                1 => format!("{} won! Congratulations!", ctx.author()),
-                2 => format!("{} won! Congratulations!", victim),
+                1 => format!("<@{}> won! Congratulations!", rps_game[0].id),
+                2 => format!("<@{}> won! Congratulations!", rps_game[1].id),
                 _ => String::from("It was a tie!")
             };
 
@@ -165,8 +169,8 @@ pub async fn rps(
                 .embed(serenity::CreateEmbed::new()
                     .title("Rock, Paper, Scissors")
                     .description(embed_desc)
-                    .field(ctx.author().name.as_str(), challenger_choice.to_string(), true)
-                    .field(victim.name.as_str(), victim_choice.to_string(), true)
+                    .field(ctx.author().name.as_str(), rps_game[0].choice.to_string(), true)
+                    .field(victim.name.as_str(), rps_game[1].choice.to_string(), true)
                     .colour(0xFFFFFF)
                 )
                 .components(Vec::new())
@@ -175,27 +179,23 @@ pub async fn rps(
             break;
         }
 
-        if challenger_choice != RPSChoices::None && victim_choice == RPSChoices::None {
-            msg.edit(ctx, poise::CreateReply::default()
-                .embed(serenity::CreateEmbed::new()
-                    .title("Rock, Paper, Scissors")
-                    .description(&embed_desc)
-                    .field(ctx.author().name.as_str(), "*Hidden*", true)
-                    .field(victim.name.as_str(), victim_choice.to_string(), true)
-                    .colour(0xFFFFFF)
-                )
-            ).await?;
+        if rps_game[0].choice != RPSChoices::None || rps_game[1].choice != RPSChoices::None {
+            let first_text = match rps_game[0].choice {
+                RPSChoices::None => rps_game[0].choice.to_string(),
+                _ => String::from("*Hidden*")
+            };
 
-            continue;
-        }
-        
-        if challenger_choice == RPSChoices::None && victim_choice != RPSChoices::None {
+            let second_text = match rps_game[1].choice {
+                RPSChoices::None => rps_game[0].choice.to_string(),
+                _ => String::from("*Hidden*")
+            };
+
             msg.edit(ctx, poise::CreateReply::default()
                 .embed(serenity::CreateEmbed::new()
                     .title("Rock, Paper, Scissors")
                     .description(&embed_desc)
-                    .field(ctx.author().name.as_str(), challenger_choice.to_string(), true)
-                    .field(victim.name.as_str(), "*Hidden*", true)
+                    .field(ctx.author().name.as_str(), first_text, true)
+                    .field(victim.name.as_str(), second_text, true)
                     .colour(0xFFFFFF)
                 )
             ).await?;
