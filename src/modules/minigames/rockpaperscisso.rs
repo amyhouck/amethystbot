@@ -186,7 +186,7 @@ pub async fn rps(
             };
 
             let second_text = match rps_game[1].choice {
-                RPSChoices::None => rps_game[0].choice.to_string(),
+                RPSChoices::None => rps_game[1].choice.to_string(),
                 _ => String::from("*Hidden*")
             };
 
