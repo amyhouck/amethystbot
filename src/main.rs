@@ -248,6 +248,8 @@ async fn main() {
 
                 minigames::bomb::bomb(),
                 minigames::rockpaperscisso::rps(),
+
+                pokemon::commands::pokemon(),
             ],
             pre_command: |ctx| {
                 Box::pin(async move {

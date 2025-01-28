@@ -10,3 +10,4 @@ pub mod bot_management;
 pub mod customgifs;
 
 pub mod minigames;
+pub mod pokemon;
