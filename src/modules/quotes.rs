@@ -1,4 +1,5 @@
 use crate::{data::{determine_display_username, user_table_check}, Context, Error};
+use futures::future;
 use poise::serenity_prelude as serenity;
 
 //--------------------
@@ -143,7 +144,7 @@ pub async fn addquote(
         .unwrap_or(0);
     quote_data.quote_id = max_quote_id + 1;
 
-    sqlx::query!("INSERT INTO quotes (guild_id, adder_id, sayer_id, quote_id, quote, timestamp, adder_display_name, sayer_display_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    let insert_query = sqlx::query!("INSERT INTO quotes (guild_id, adder_id, sayer_id, quote_id, quote, timestamp, adder_display_name, sayer_display_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             quote_data.guild_id,
             quote_data.adder_id,
             quote_data.sayer_id,
@@ -153,9 +154,10 @@ pub async fn addquote(
             quote_data.adder_display_name,
             quote_data.sayer_display_name
         )
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+        .execute(&ctx.data().database);
+
+    let quoter_check = user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), ctx.author());
+    let sayer_check = user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &sayer);
 
     let query = format!("UPDATE users SET quotes_added = quotes_added + 1 WHERE guild_id = {} AND user_id = {};
         UPDATE users SET times_quoted = times_quoted + 1 WHERE guild_id = {} AND user_id = {}",
@@ -165,13 +167,10 @@ pub async fn addquote(
         quote_data.sayer_id
     );
 
-    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), ctx.author()).await;
-    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &sayer).await;
+    let stat_update = sqlx::raw_sql(&query)
+        .execute(&ctx.data().database);
 
-    sqlx::raw_sql(&query)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+    let _ = future::join4(insert_query, quoter_check, sayer_check, stat_update).await;
 
     // Build embed then post success
     let quote_embed = build_single_quote_embed(ctx.http(), quote_data).await;
