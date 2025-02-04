@@ -22,7 +22,7 @@ enum StarterGroupA {
     subcommands("starter")
 )]
 pub async fn pokemon(
-    ctx: Context<'_>
+    _: Context<'_>
 ) -> Result<(), Error> {
     Ok(())
 }
