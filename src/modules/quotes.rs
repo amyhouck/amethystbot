@@ -269,8 +269,8 @@ pub async fn delquote(
         .unwrap();
 
     // Alter quote stats
-    let query = format!("UPDATE users SET quotes_added = quotes_added - 1 WHERE guild_id = {} AND user_id = {};
-        UPDATE users SET times_quoted = times_quoted - 1 WHERE guild_id = {} AND user_id = {}",
+    let query = format!("UPDATE users SET quotes_added = quotes_added - 1 WHERE guild_id = {} AND user_id = {} AND quotes_added > 0;
+        UPDATE users SET times_quoted = times_quoted - 1 WHERE guild_id = {} AND user_id = {} AND times_quoted > 0",
         quote.guild_id,
         quote.adder_id,
         quote.guild_id,
