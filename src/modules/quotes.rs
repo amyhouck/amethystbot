@@ -331,14 +331,31 @@ pub async fn setquoterole(
 )]
 pub async fn listquotes(
     ctx: Context<'_>,
+    #[description = "Pull all quotes from a user."] user: Option<serenity::User>
 ) -> Result<(), Error> {
     // Grab sorted guild quotes into vector
     let guild_id = ctx.guild_id().unwrap().get();
+    
+    let user_id = match user {
+        Some(u) => u.id.get(),
+        None => 0
+    };
 
-    let guild_quotes: Vec<Quote> = sqlx::query_as!(Quote, "SELECT * FROM quotes WHERE guild_id = ? ORDER BY quote_id", guild_id)
-        .fetch_all(&ctx.data().database)
-        .await
-        .unwrap();
+    let guild_quotes: Vec<Quote> = if user_id == 0 {
+        sqlx::query_as!(Quote, "SELECT * FROM quotes WHERE guild_id = ? ORDER BY quote_id", guild_id)
+            .fetch_all(&ctx.data().database)
+            .await
+            .unwrap()
+    } else {
+        sqlx::query_as!(Quote, "SELECT * FROM quotes WHERE guild_id = ? AND sayer_id = ? ORDER BY quote_id", guild_id, user_id)
+            .fetch_all(&ctx.data().database)
+            .await
+            .unwrap()
+    };
+
+    if guild_quotes.len() == 0 {
+        return Err("No quotes found!".into());
+    }
 
     // Create initial embed
     let pages = split_quotes_into_pages(guild_quotes);
