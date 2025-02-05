@@ -17,7 +17,6 @@ impl Data {
         // Set Data
         let database_url = std::env::var("DATABASE_URL").expect("missing DATABASE_URL");
         let database = sqlx::mysql::MySqlPool::connect(&database_url).await.unwrap();
-        //sqlx::migrate!("./migrations").run(&database).await.unwrap();
 
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, HeaderValue::from_static("AmethystBot/1.0"));
