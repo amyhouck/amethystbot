@@ -1,7 +1,6 @@
 use crate::{Context, Error};
 use poise::serenity_prelude as serenity;
 use crate::pokemon::data;
-use crate::pokemon::pokemon::generate_new_pokemon;
 
 //--------------------
 // Command Data
@@ -43,16 +42,6 @@ pub async fn starter(
     }
 
     let starter_id = group_a.unwrap() as u32;
-
-    // Handle Pokemon generation
-    let pokemon_base_info = sqlx::query_as!(data::PokemonBase, "SELECT * FROM pokemon_base_info WHERE id = ?", starter_id)
-        .fetch_one(&ctx.data().database)
-        .await
-        .unwrap();
-
-    let pokemon = generate_new_pokemon(pokemon_base_info);
-
-    ctx.say(format!("{:?}", pokemon)).await?;
 
     Ok(())
 }
