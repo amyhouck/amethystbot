@@ -2,7 +2,7 @@ mod data;
 mod modules;
 mod events;
 
-use data::{Data, alter_db_display_name, determine_display_username, user_table_check};
+use data::{alter_db_display_name, determine_display_username, user_table_add, user_table_check, Data};
 use poise::serenity_prelude as serenity;
 use dotenv::dotenv;
 use chrono::Utc;
@@ -128,7 +128,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
 
             channel.send_message(&ctx, serenity::CreateMessage::new().embed(welcome_embed)).await.unwrap();
 
-            user_table_check(&data.database, &ctx.http, new_member.guild_id, &new_member.user).await;
+            user_table_add(&data.database, guild_id, new_member.user.id.get(), new_member.display_name().to_string()).await;
         },
 
         serenity::FullEvent::GuildMemberRemoval { guild_id, user, ..} => {
@@ -181,8 +181,25 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
         },
 
         serenity::FullEvent::VoiceStateUpdate { old, new } => {
-            user_table_check(&data.database, &ctx.http, new.guild_id.unwrap(), &new.member.as_ref().unwrap().user).await;
+            // Check for user in the database
+            // We do it here manually since the data::user_table_check function requires poise::Context and not serenity::Content.
+            // No point in writing a second check function using serenity::Context if it's only going to be used here for now
+            let guild_id = new.guild_id.unwrap();
+            let user_id = new.user_id;
 
+            let db_user = sqlx::query!("SELECT display_name, COUNT(user_id) AS count FROM users WHERE guild_id = ? AND user_id = ?", guild_id.get(), user_id.get())
+                .fetch_one(&data.database)
+                .await
+                .unwrap();
+
+            let display_name = determine_display_username(&ctx.http, &new.member.as_ref().unwrap().user, guild_id).await;
+
+            // If user doesn't exist, add them. Returns after adding
+            if db_user.count == 0 {
+                user_table_add(&data.database, guild_id.get(), user_id.get(), display_name).await;
+            }
+
+            // Events here
             // Handle connection to VC
             if old.is_none() && new.channel_id.is_some() {
                 events::on_user_vc_connect(data, old, new).await?;
@@ -253,7 +270,7 @@ async fn main() {
                 Box::pin(async move {
                     log::write_log(log::LogType::CommandExecution { ctx });
 
-                    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), ctx.author()).await;
+                    user_table_check(ctx, ctx.author()).await;
                 })
             },
             event_handler: |ctx, event, framework, data| Box::pin(listener(ctx, event, framework, data)),

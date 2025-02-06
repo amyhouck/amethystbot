@@ -20,6 +20,7 @@ pub async fn stats(
 
     let user_id = user.id;
     let guild_id = ctx.guild_id().unwrap().get();
+    user_table_check(ctx, &user).await;
 
     // Update Voice Time
     let vc_info = ctx.guild().unwrap().voice_states.clone();
@@ -33,7 +34,6 @@ pub async fn stats(
     }
     
     // Build stats embed
-    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &user).await;
     let user_data = sqlx::query_as!(User, "SELECT * FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id.get())
         .fetch_one(&ctx.data().database)
         .await

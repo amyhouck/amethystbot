@@ -91,7 +91,7 @@ pub async fn bomb(
         .components(vec![buttons])).await?;
 
     // Handle stats and check for target
-    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &target).await;
+    user_table_check(ctx, &target).await;
     sqlx::query!("UPDATE users SET bomb_sent = bomb_sent + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.sender)
         .execute(&ctx.data().database)
         .await

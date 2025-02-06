@@ -59,7 +59,7 @@ pub async fn slap(
     // Stat handling
     let guild_id = ctx.guild_id().unwrap().get();
     let executioner_id = ctx.author().id.get();
-    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &victim).await;  // - Check victim's existence
+    user_table_check(ctx, &victim).await;  // - Check victim's existence
 
     if ctx.author() != &victim {
         let query = format!("UPDATE users SET slap_sent = slap_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
@@ -114,7 +114,7 @@ pub async fn cookie(
     let guild_id = ctx.guild_id().unwrap().get();
     let executioner_id = ctx.author().id.get();
     let victim_id = victim.id.get();
-    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &victim).await;  // - Check victim's existence
+    user_table_check(ctx, &victim).await;  // - Check victim's existence
 
     if ctx.author() != &victim {
         let query = format!("UPDATE users SET cookie_sent = cookie_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
@@ -163,7 +163,7 @@ pub async fn tea(
     let guild_id = ctx.guild_id().unwrap().get();
     let executioner_id = ctx.author().id.get();
     let victim_id = victim.id.get();
-    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &victim).await;  // - Check victim's existence
+    user_table_check(ctx, &victim).await;  // - Check victim's existence
 
     if ctx.author() != &victim {
         let query = format!("UPDATE users SET tea_sent = tea_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
@@ -223,7 +223,7 @@ pub async fn cake(
     let guild_id = ctx.guild_id().unwrap().get();
     let executioner_id = ctx.author().id.get();
     let victim_id = victim.id.get();
-    user_table_check(&ctx.data().database, ctx.http(), ctx.guild_id().unwrap(), &victim).await;  // - Check victim's existence
+    user_table_check(ctx, &victim).await;  // - Check victim's existence
 
     // Update stats
     if ctx.author() != &victim {
