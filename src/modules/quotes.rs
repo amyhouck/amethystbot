@@ -158,18 +158,7 @@ pub async fn addquote(
 
     let sayer_check = user_table_check(ctx, &sayer);
 
-    let query = format!("UPDATE users SET quotes_added = quotes_added + 1 WHERE guild_id = {} AND user_id = {};
-        UPDATE users SET times_quoted = times_quoted + 1 WHERE guild_id = {} AND user_id = {}",
-        quote_data.guild_id,
-        quote_data.adder_id,
-        quote_data.guild_id,
-        quote_data.sayer_id
-    );
-
-    let stat_update = sqlx::raw_sql(&query)
-        .execute(&ctx.data().database);
-
-    let _ = future::join3(insert_query, sayer_check, stat_update).await;
+    let _ = future::join(insert_query, sayer_check).await;
 
     // Build embed then post success
     let quote_embed = build_single_quote_embed(ctx.http(), quote_data).await;
@@ -243,7 +232,7 @@ pub async fn delquote(
         .await
         .unwrap();
 
-    let quote = match quote {
+    let _ = match quote {
         Some(q) => q,
         None => return Err("No quote saved with that ID!".into())
     };
@@ -263,23 +252,6 @@ pub async fn delquote(
 
     // Adjust quote IDs
     sqlx::query!("UPDATE quotes SET quote_id = quote_id - 1 WHERE guild_id = ? AND quote_id > ?", guild_id, id)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
-
-    // Alter quote stats
-    let query = format!("UPDATE users SET quotes_added = quotes_added - 1 WHERE guild_id = {} AND user_id = {} AND quotes_added > 0;
-        UPDATE users SET times_quoted = times_quoted - 1 WHERE guild_id = {} AND user_id = {} AND times_quoted > 0",
-        quote.guild_id,
-        quote.adder_id,
-        quote.guild_id,
-        quote.sayer_id
-    );
-
-    user_table_check(ctx, &serenity::UserId::new(quote.adder_id).to_user(&ctx).await.unwrap()).await; // This is ugly and needs to change
-    user_table_check(ctx, &serenity::UserId::new(quote.sayer_id).to_user(&ctx).await.unwrap()).await; // This is also ugly and needs to change
-
-    sqlx::raw_sql(&query)
         .execute(&ctx.data().database)
         .await
         .unwrap();

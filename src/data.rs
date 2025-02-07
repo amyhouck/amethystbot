@@ -136,8 +136,6 @@ pub struct User {
     pub vctrack_total_time: u32,
     pub vctrack_monthly_time: u32,
     pub display_name: String,
-    pub times_quoted: u32,
-    pub quotes_added: u32,
 }
 
 //--------------------------

@@ -12,6 +12,8 @@ pub async fn stats(
     ctx: Context<'_>,
     #[description = "The user you want stats for."] user: Option<serenity::User>
 ) -> Result<(), Error> {
+    ctx.defer().await?;
+
     // Get user id and check database
     let user = match user {
         Some(u) => u,
@@ -32,6 +34,12 @@ pub async fn stats(
             Err(e) => return Err(e)
         }
     }
+
+    // Grab quote counts
+    let quote_data = sqlx::query!("SELECT CAST(SUM(IF(adder_id = ?, 1, 0)) AS INTEGER) AS quotes_added, CAST(SUM(IF(sayer_id = ?, 1, 0)) AS INTEGER) AS times_quoted FROM quotes WHERE guild_id = ?", user_id.get(), user_id.get(), guild_id)
+        .fetch_one(&ctx.data().database)
+        .await
+        .unwrap();
     
     // Build stats embed
     let user_data = sqlx::query_as!(User, "SELECT * FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id.get())
@@ -59,8 +67,8 @@ pub async fn stats(
         user_data.bomb_failed,
         user_data.cake_glados,
         vctime,
-        user_data.times_quoted,
-        user_data.quotes_added
+        quote_data.times_quoted.unwrap(),
+        quote_data.quotes_added.unwrap()
     );
 
     let stat_embed = serenity::CreateEmbed::new()
