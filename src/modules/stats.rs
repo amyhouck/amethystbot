@@ -53,22 +53,21 @@ pub async fn stats(
         user_data.vctrack_total_time % 60,
     );
 
-    let embed_desc = format!("**Time spent in VC:** {12}\n\n**Cookies sent:** {0}\n**Cookies received:** {1}\n\n**Cakes sent:** {2}\n**Cakes received:** {3}\n**Times GLaDOSed:** {11}\n\n**Cups of tea given:** {6}\n**Cups of tea received:** {7}\n\n**People slapped:** {4}\n**Slaps received:** {5}\n\n**Times quoted:** {13}\n**Quotes added:** {14}\n\n**Bombs sent:** {8}\n**Bombs defused:** {9}\n**Times exploded:** {10}",
-        user_data.cookie_sent,
-        user_data.cookie_received,
-        user_data.cake_sent,
-        user_data.cake_received,
-        user_data.slap_sent,
-        user_data.slap_received,
-        user_data.tea_sent,
-        user_data.tea_received,
-        user_data.bomb_sent,
-        user_data.bomb_defused,
-        user_data.bomb_failed,
-        user_data.cake_glados,
-        vctime,
-        quote_data.times_quoted.unwrap(),
-        quote_data.quotes_added.unwrap()
+    let embed_desc = format!("**Time spent in VC:** {vctime}\n\n**Cookies sent:** {cookie_sent}\n**Cookies received:** {cookie_received}\n\n**Cakes sent:** {cake_sent}\n**Cakes received:** {cake_received}\n**Times GLaDOSed:** {cake_glados}\n\n**Cups of tea given:** {tea_sent}\n**Cups of tea received:** {tea_received}\n\n**People slapped:** {slap_sent}\n**Slaps received:** {slap_received}\n\n**Times quoted:** {times_quoted}\n**Quotes added:** {quotes_added}\n\n**Bombs sent:** {bomb_sent}\n**Bombs defused:** {bomb_defused}\n**Times exploded:** {bomb_failed}",
+        cookie_sent = user_data.cookie_sent,
+        cookie_received = user_data.cookie_received,
+        cake_sent = user_data.cake_sent,
+        cake_received = user_data.cake_received,
+        cake_glados = user_data.cake_glados,
+        slap_sent = user_data.slap_sent,
+        slap_received = user_data.slap_received,
+        tea_sent = user_data.tea_sent,
+        tea_received = user_data.tea_received,
+        bomb_sent = user_data.bomb_sent,
+        bomb_defused = user_data.bomb_defused,
+        bomb_failed = user_data.bomb_failed,
+        times_quoted = quote_data.times_quoted.unwrap(),
+        quotes_added = quote_data.quotes_added.unwrap()
     );
 
     let stat_embed = serenity::CreateEmbed::new()
