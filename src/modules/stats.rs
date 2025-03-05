@@ -74,7 +74,11 @@ pub async fn stats(
         
         **Bombs sent:** {bomb_sent}
         **Bombs defused:** {bomb_defused}
-        **Times exploded:** {bomb_failed}",
+        **Times exploded:** {bomb_failed}
+        
+        **Won Rock, Paper, Scissors:** {rps_win}
+        **Lost Rock, Paper, Scissors:** {rps_loss}
+        **Tied Rock, Paper, Scissors:** {rps_tie}",
         
         cookie_sent = user_data.cookie_sent,
         cookie_received = user_data.cookie_received,
@@ -89,7 +93,10 @@ pub async fn stats(
         bomb_defused = user_data.bomb_defused,
         bomb_failed = user_data.bomb_failed,
         times_quoted = quote_data.times_quoted.unwrap(),
-        quotes_added = quote_data.quotes_added.unwrap()
+        quotes_added = quote_data.quotes_added.unwrap(),
+        rps_win = user_data.rps_win,
+        rps_loss = user_data.rps_loss,
+        rps_tie = user_data.rps_tie
     );
 
     let stat_embed = serenity::CreateEmbed::new()
