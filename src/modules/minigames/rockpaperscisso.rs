@@ -65,6 +65,45 @@ fn determine_winner_result(
     }
 }
 
+async fn update_stats(
+    db: &sqlx::MySqlPool,
+    guild_id: &u64,
+    players: &[RPSPlayer; 2],
+    winner: &u32
+) {
+    let query = match winner {
+        1 => {
+            format!(
+                "UPDATE users SET rps_win = rps_win + 1 WHERE guild_id = {guild_id} AND user_id = {winner_id};
+                UPDATE users SET rps_loss = rps_loss + 1 WHERE guild_id = {guild_id} AND user_id = {loser_id}",
+                winner_id = players[0].id,
+                loser_id = players[1].id
+            )
+        },
+        2 => {
+            format!(
+                "UPDATE users SET rps_win = rps_win + 1 WHERE guild_id = {guild_id} AND user_id = {winner_id};
+                UPDATE users SET rps_loss = rps_loss + 1 WHERE guild_id = {guild_id} AND user_id = {loser_id}",
+                winner_id = players[1].id,
+                loser_id = players[0].id
+            )
+        },
+        _ => {
+            format!(
+                "UPDATE users SET rps_tie = rps_tie + 1 WHERE guild_id = {guild_id} AND user_id = {player_one};
+                UPDATE users SET rps_tie = rps_tie + 1 WHERE guild_id = {guild_id} AND user_id = {player_two}",
+                player_one = players[0].id,
+                player_two = players[1].id
+            )
+        }
+    };
+    
+    sqlx::raw_sql(&query)
+        .execute(db)
+        .await
+        .unwrap();
+}
+
 /// Challenge someone to rock, paper, scissors!
 #[poise::command(
     slash_command,
@@ -158,10 +197,15 @@ pub async fn rps(
         if rps_game[0].choice != RPSChoices::None && rps_game[1].choice != RPSChoices::None {
             // Determine winner to update
             let winner = determine_winner_result(&rps_game[0].choice, &rps_game[1].choice);
+            update_stats(&ctx.data().database, &guild_id, &rps_game, &winner).await;
             
             let embed_desc = match winner {
-                1 => format!("<@{}> won! Congratulations!", rps_game[0].id),
-                2 => format!("<@{}> won! Congratulations!", rps_game[1].id),
+                1 => {
+                    format!("<@{}> won! Congratulations!", rps_game[0].id)
+                },
+                2 => {
+                    format!("<@{}> won! Congratulations!", rps_game[1].id)
+                },
                 _ => String::from("It was a tie!")
             };
 
