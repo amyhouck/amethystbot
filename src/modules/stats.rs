@@ -53,7 +53,29 @@ pub async fn stats(
         user_data.vctrack_total_time % 60,
     );
 
-    let embed_desc = format!("**Time spent in VC:** {vctime}\n\n**Cookies sent:** {cookie_sent}\n**Cookies received:** {cookie_received}\n\n**Cakes sent:** {cake_sent}\n**Cakes received:** {cake_received}\n**Times GLaDOSed:** {cake_glados}\n\n**Cups of tea given:** {tea_sent}\n**Cups of tea received:** {tea_received}\n\n**People slapped:** {slap_sent}\n**Slaps received:** {slap_received}\n\n**Times quoted:** {times_quoted}\n**Quotes added:** {quotes_added}\n\n**Bombs sent:** {bomb_sent}\n**Bombs defused:** {bomb_defused}\n**Times exploded:** {bomb_failed}",
+    let embed_desc = format!("
+        **Time spent in VC:** {vctime}
+        
+        **Cookies sent:** {cookie_sent}
+        **Cookies received:** {cookie_received}
+        
+        **Cakes sent:** {cake_sent}
+        **Cakes received:** {cake_received}
+        **Times GLaDOSed:** {cake_glados}
+        
+        **Cups of tea given:** {tea_sent}
+        **Cups of tea received:** {tea_received}
+        
+        **People slapped:** {slap_sent}
+        **Slaps received:** {slap_received}
+        
+        **Times quoted:** {times_quoted}
+        **Quotes added:** {quotes_added}
+        
+        **Bombs sent:** {bomb_sent}
+        **Bombs defused:** {bomb_defused}
+        **Times exploded:** {bomb_failed}",
+        
         cookie_sent = user_data.cookie_sent,
         cookie_received = user_data.cookie_received,
         cake_sent = user_data.cake_sent,
