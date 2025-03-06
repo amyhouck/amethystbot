@@ -52,60 +52,7 @@ pub async fn stats(
         (user_data.vctrack_total_time / 60) % 60,
         user_data.vctrack_total_time % 60,
     );
-
-    let embed_desc = format!("
-        **Time spent in VC:** {vctime}
-        
-        **Cookies sent:** {cookie_sent}
-        **Cookies received:** {cookie_received}
-        
-        **Cakes sent:** {cake_sent}
-        **Cakes received:** {cake_received}
-        **Times GLaDOSed:** {cake_glados}
-        
-        **Cups of tea given:** {tea_sent}
-        **Cups of tea received:** {tea_received}
-        
-        **People slapped:** {slap_sent}
-        **Slaps received:** {slap_received}
-        
-        **Times quoted:** {times_quoted}
-        **Quotes added:** {quotes_added}
-        
-        **Bombs sent:** {bomb_sent}
-        **Bombs defused:** {bomb_defused}
-        **Times exploded:** {bomb_failed}
-        
-        **Won Rock, Paper, Scissors:** {rps_win}
-        **Lost Rock, Paper, Scissors:** {rps_loss}
-        **Tied Rock, Paper, Scissors:** {rps_tie}",
-        
-        cookie_sent = user_data.cookie_sent,
-        cookie_received = user_data.cookie_received,
-        cake_sent = user_data.cake_sent,
-        cake_received = user_data.cake_received,
-        cake_glados = user_data.cake_glados,
-        slap_sent = user_data.slap_sent,
-        slap_received = user_data.slap_received,
-        tea_sent = user_data.tea_sent,
-        tea_received = user_data.tea_received,
-        bomb_sent = user_data.bomb_sent,
-        bomb_defused = user_data.bomb_defused,
-        bomb_failed = user_data.bomb_failed,
-        times_quoted = quote_data.times_quoted.unwrap(),
-        quotes_added = quote_data.quotes_added.unwrap(),
-        rps_win = user_data.rps_win,
-        rps_loss = user_data.rps_loss,
-        rps_tie = user_data.rps_tie
-    );
-
-    let stat_embed = serenity::CreateEmbed::new()
-        .title(format!("{}'s stats", user_data.display_name))
-        .thumbnail(user.face())
-        .description(embed_desc)
-        .colour(0x8caac2);
-
-    ctx.send(poise::CreateReply::default().embed(stat_embed)).await?;
+    
     Ok(())
 }
 
