@@ -62,6 +62,34 @@ fn build_misc_embed(
         .colour(0x8CAAC2)
 }
 
+fn build_minigames_embed(
+    user_data: &User,
+    user_avatar: &String
+) -> serenity::CreateEmbed {
+    let embed_description = format!("
+        **Bombs sent:** {bomb_sent}
+        **Bombs defused:** {bomb_defused}
+        **Times exploded:** {bomb_failed}
+        
+        **Won Rock, Paper, Scissors:** {rps_win}
+        **Lost Rock, Paper, Scissors:** {rps_loss}
+        **Tied Rock, Paper, Scissors:** {rps_tie}",
+        
+        bomb_sent = user_data.bomb_sent,
+        bomb_defused = user_data.bomb_defused,
+        bomb_failed = user_data.bomb_failed,
+        rps_win = user_data.rps_win,
+        rps_loss = user_data.rps_loss,
+        rps_tie = user_data.rps_tie
+    );
+    
+    serenity::CreateEmbed::default()
+        .title(format!("{}'s Stats (Minigames)", &user_data.display_name))
+        .thumbnail(user_avatar)
+        .description(embed_description)
+        .colour(0x8CAAC2)
+}
+
 //---------------------
 // Commands
 //---------------------
@@ -70,6 +98,7 @@ fn build_misc_embed(
     slash_command,
     guild_only,
     member_cooldown = 5,
+    ephemeral
 )]
 pub async fn stats(
     ctx: Context<'_>,
@@ -117,9 +146,10 @@ pub async fn stats(
     );
     
     let avatar_url = user.avatar_url().unwrap_or(String::new());
-    let stat_embeds: [serenity::CreateEmbed; 2] = [
+    let stat_embeds: [serenity::CreateEmbed; 3] = [
         build_general_embed(&user_data, &avatar_url, vctime, quote_data.quotes_added.unwrap(), quote_data.times_quoted.unwrap()),
-        build_misc_embed(&user_data, &avatar_url)
+        build_misc_embed(&user_data, &avatar_url),
+        build_minigames_embed(&user_data, &avatar_url)
     ];
     
     // Build interaction
@@ -127,10 +157,12 @@ pub async fn stats(
     let ctx_id = ctx.id();
     let gen_id = format!("{ctx_id}gen");
     let misc_id = format!("{ctx_id}misc");
+    let mg_id = format!("{ctx_id}mg");
     
     let buttons: Vec<serenity::CreateButton> = vec![
         serenity::CreateButton::new(&gen_id).label("General"),
-        serenity::CreateButton::new(&misc_id).label("Miscellaneous")  
+        serenity::CreateButton::new(&misc_id).label("Miscellaneous"),
+        serenity::CreateButton::new(&mg_id).label("Minigames")
     ];
     let buttons = serenity::CreateActionRow::Buttons(buttons);
     
@@ -149,6 +181,8 @@ pub async fn stats(
             stats_page = 0;
         } else if press.data.custom_id == misc_id {
             stats_page = 1;
+        } else if press.data.custom_id == mg_id {
+            stats_page = 2;
         } else {
             continue;
         }
