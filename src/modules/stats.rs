@@ -7,7 +7,7 @@ use poise::serenity_prelude as serenity;
 //---------------------
 fn build_general_embed(
     amethyst_user: &User,
-    user_avatar: String,
+    user_avatar: &String,
     vctime: String,
     quotes_added: i64,
     times_quoted: i64,
@@ -16,13 +16,50 @@ fn build_general_embed(
         **Time spent in VC:** {vctime}
         
         **Quotes added:** {quotes_added}
-        **Times quoted:** {times_quoted}",
-        );
+        **Times quoted:** {times_quoted}"
+    );
         
     serenity::CreateEmbed::default()
-        .title(format!("{}'s stats", &amethyst_user.display_name))
+        .title(format!("{}'s Stats", &amethyst_user.display_name))
         .thumbnail(user_avatar)
         .description(embed_description)
+        .colour(0x8CAAC2)
+}
+
+fn build_misc_embed(
+    user_data: &User,
+    user_avatar: &String,
+) -> serenity::CreateEmbed {
+    let embed_description = format!("
+        **Cookies sent:** {cookie_sent}
+        **Cookies received:** {cookie_received}
+        
+        **Cakes sent:** {cake_sent}
+        **Cakes received:** {cake_received}
+        **Times GLaDOSed:** {cake_glados}
+        
+        **Cups of tea given:** {tea_sent}
+        **Cups of tea received:** {tea_received}
+        
+        **People slapped:** {slap_sent}
+        **Slaps received:** {slap_received}",
+        
+        cookie_sent = user_data.cookie_sent,
+        cookie_received = user_data.cookie_received,
+        cake_sent = user_data.cake_sent,
+        cake_received = user_data.cake_received,
+        cake_glados = user_data.cake_glados,
+        slap_sent = user_data.slap_sent,
+        slap_received = user_data.slap_received,
+        tea_sent = user_data.tea_sent,
+        tea_received = user_data.tea_received
+    );
+    
+    serenity::CreateEmbed::default()
+        .title(format!("{}'s Stats (Misc.)", &user_data.display_name))
+        .thumbnail(user_avatar)
+        .description(embed_description)
+        .colour(0x8CAAC2)
 }
 
 //---------------------
@@ -79,11 +116,51 @@ pub async fn stats(
         user_data.vctrack_total_time % 60,
     );
     
-    let stat_embeds: [serenity::CreateEmbed; 1] = [
-        build_general_embed(&user_data, user.avatar_url().unwrap_or(String::new()), vctime, quote_data.quotes_added.unwrap(), quote_data.times_quoted.unwrap())  
+    let avatar_url = user.avatar_url().unwrap_or(String::new());
+    let stat_embeds: [serenity::CreateEmbed; 2] = [
+        build_general_embed(&user_data, &avatar_url, vctime, quote_data.quotes_added.unwrap(), quote_data.times_quoted.unwrap()),
+        build_misc_embed(&user_data, &avatar_url)
     ];
     
-    ctx.send(poise::CreateReply::default().embed(stat_embeds[0].clone())).await?;
+    // Build interaction
+    let mut stats_page = 0;
+    let ctx_id = ctx.id();
+    let gen_id = format!("{ctx_id}gen");
+    let misc_id = format!("{ctx_id}misc");
+    
+    let buttons: Vec<serenity::CreateButton> = vec![
+        serenity::CreateButton::new(&gen_id).label("General"),
+        serenity::CreateButton::new(&misc_id).label("Miscellaneous")  
+    ];
+    let buttons = serenity::CreateActionRow::Buttons(buttons);
+    
+    ctx.send(poise::CreateReply::default()
+        .embed(stat_embeds[stats_page].clone())
+        .components(vec![buttons])
+    ).await?;
+    
+    // Handle interaction
+    while let Some(press) = serenity::ComponentInteractionCollector::new(ctx)
+        .filter(move |press| press.data.custom_id.starts_with(&ctx_id.to_string()))
+        .timeout(std::time::Duration::from_secs(600))
+        .await
+    {
+        if press.data.custom_id == gen_id {
+            stats_page = 0;
+        } else if press.data.custom_id == misc_id {
+            stats_page = 1;
+        } else {
+            continue;
+        }
+        
+        press.create_response(
+            ctx.serenity_context(),
+            serenity::CreateInteractionResponse::UpdateMessage(
+                serenity::CreateInteractionResponseMessage::new()
+                    .embed(stat_embeds[stats_page].clone())   
+            )
+        ).await?;
+    }
     
     Ok(())
 }
