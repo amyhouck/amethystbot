@@ -98,13 +98,12 @@ fn build_minigames_embed(
     slash_command,
     guild_only,
     member_cooldown = 5,
-    ephemeral
 )]
 pub async fn stats(
     ctx: Context<'_>,
     #[description = "The user you want stats for."] user: Option<serenity::User>
 ) -> Result<(), Error> {
-    ctx.defer().await?;
+    ctx.defer_ephemeral().await?;
 
     // Get user id and check database
     let user = match user {
