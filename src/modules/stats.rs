@@ -2,6 +2,97 @@ use crate::{data, Context, Error};
 use crate::data::{user_table_check, User};
 use poise::serenity_prelude as serenity;
 
+//---------------------
+// Stat embed page builders
+//---------------------
+fn build_general_embed(
+    amethyst_user: &User,
+    user_avatar: &String,
+    vctime: String,
+    quotes_added: i64,
+    times_quoted: i64,
+) -> serenity::CreateEmbed {
+    let embed_description = format!("
+        **Time spent in VC:** {vctime}
+        
+        **Quotes added:** {quotes_added}
+        **Times quoted:** {times_quoted}"
+    );
+        
+    serenity::CreateEmbed::default()
+        .title(format!("{}'s Stats", &amethyst_user.display_name))
+        .thumbnail(user_avatar)
+        .description(embed_description)
+        .colour(0x8CAAC2)
+}
+
+fn build_misc_embed(
+    user_data: &User,
+    user_avatar: &String,
+) -> serenity::CreateEmbed {
+    let embed_description = format!("
+        **Cookies sent:** {cookie_sent}
+        **Cookies received:** {cookie_received}
+        
+        **Cakes sent:** {cake_sent}
+        **Cakes received:** {cake_received}
+        **Times GLaDOSed:** {cake_glados}
+        
+        **Cups of tea given:** {tea_sent}
+        **Cups of tea received:** {tea_received}
+        
+        **People slapped:** {slap_sent}
+        **Slaps received:** {slap_received}",
+        
+        cookie_sent = user_data.cookie_sent,
+        cookie_received = user_data.cookie_received,
+        cake_sent = user_data.cake_sent,
+        cake_received = user_data.cake_received,
+        cake_glados = user_data.cake_glados,
+        slap_sent = user_data.slap_sent,
+        slap_received = user_data.slap_received,
+        tea_sent = user_data.tea_sent,
+        tea_received = user_data.tea_received
+    );
+    
+    serenity::CreateEmbed::default()
+        .title(format!("{}'s Stats (Misc.)", &user_data.display_name))
+        .thumbnail(user_avatar)
+        .description(embed_description)
+        .colour(0x8CAAC2)
+}
+
+fn build_minigames_embed(
+    user_data: &User,
+    user_avatar: &String
+) -> serenity::CreateEmbed {
+    let embed_description = format!("
+        **Bombs sent:** {bomb_sent}
+        **Bombs defused:** {bomb_defused}
+        **Times exploded:** {bomb_failed}
+        
+        **Won Rock, Paper, Scissors:** {rps_win}
+        **Lost Rock, Paper, Scissors:** {rps_loss}
+        **Tied Rock, Paper, Scissors:** {rps_tie}",
+        
+        bomb_sent = user_data.bomb_sent,
+        bomb_defused = user_data.bomb_defused,
+        bomb_failed = user_data.bomb_failed,
+        rps_win = user_data.rps_win,
+        rps_loss = user_data.rps_loss,
+        rps_tie = user_data.rps_tie
+    );
+    
+    serenity::CreateEmbed::default()
+        .title(format!("{}'s Stats (Minigames)", &user_data.display_name))
+        .thumbnail(user_avatar)
+        .description(embed_description)
+        .colour(0x8CAAC2)
+}
+
+//---------------------
+// Commands
+//---------------------
 /// Check user stats
 #[poise::command(
     slash_command,
@@ -12,14 +103,14 @@ pub async fn stats(
     ctx: Context<'_>,
     #[description = "The user you want stats for."] user: Option<serenity::User>
 ) -> Result<(), Error> {
-    ctx.defer().await?;
+    ctx.defer_ephemeral().await?;
 
     // Get user id and check database
     let user = match user {
         Some(u) => u,
         None => ctx.author().clone()
     };
-
+    
     let user_id = user.id;
     let guild_id = ctx.guild_id().unwrap().get();
     user_table_check(ctx, &user).await;
@@ -41,7 +132,7 @@ pub async fn stats(
         .await
         .unwrap();
     
-    // Build stats embed
+    // Build stats embeds
     let user_data = sqlx::query_as!(User, "SELECT * FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id.get())
         .fetch_one(&ctx.data().database)
         .await
@@ -52,60 +143,58 @@ pub async fn stats(
         (user_data.vctrack_total_time / 60) % 60,
         user_data.vctrack_total_time % 60,
     );
-
-    let embed_desc = format!("
-        **Time spent in VC:** {vctime}
+    
+    let avatar_url = user.avatar_url().unwrap_or(String::new());
+    let stat_embeds: [serenity::CreateEmbed; 3] = [
+        build_general_embed(&user_data, &avatar_url, vctime, quote_data.quotes_added.unwrap(), quote_data.times_quoted.unwrap()),
+        build_misc_embed(&user_data, &avatar_url),
+        build_minigames_embed(&user_data, &avatar_url)
+    ];
+    
+    // Build interaction
+    let mut stats_page = 0;
+    let ctx_id = ctx.id();
+    let gen_id = format!("{ctx_id}gen");
+    let misc_id = format!("{ctx_id}misc");
+    let mg_id = format!("{ctx_id}mg");
+    
+    let buttons: Vec<serenity::CreateButton> = vec![
+        serenity::CreateButton::new(&gen_id).label("General"),
+        serenity::CreateButton::new(&misc_id).label("Miscellaneous"),
+        serenity::CreateButton::new(&mg_id).label("Minigames")
+    ];
+    let buttons = serenity::CreateActionRow::Buttons(buttons);
+    
+    ctx.send(poise::CreateReply::default()
+        .embed(stat_embeds[stats_page].clone())
+        .components(vec![buttons])
+    ).await?;
+    
+    // Handle interaction
+    while let Some(press) = serenity::ComponentInteractionCollector::new(ctx)
+        .filter(move |press| press.data.custom_id.starts_with(&ctx_id.to_string()))
+        .timeout(std::time::Duration::from_secs(600))
+        .await
+    {
+        if press.data.custom_id == gen_id {
+            stats_page = 0;
+        } else if press.data.custom_id == misc_id {
+            stats_page = 1;
+        } else if press.data.custom_id == mg_id {
+            stats_page = 2;
+        } else {
+            continue;
+        }
         
-        **Cookies sent:** {cookie_sent}
-        **Cookies received:** {cookie_received}
-        
-        **Cakes sent:** {cake_sent}
-        **Cakes received:** {cake_received}
-        **Times GLaDOSed:** {cake_glados}
-        
-        **Cups of tea given:** {tea_sent}
-        **Cups of tea received:** {tea_received}
-        
-        **People slapped:** {slap_sent}
-        **Slaps received:** {slap_received}
-        
-        **Times quoted:** {times_quoted}
-        **Quotes added:** {quotes_added}
-        
-        **Bombs sent:** {bomb_sent}
-        **Bombs defused:** {bomb_defused}
-        **Times exploded:** {bomb_failed}
-        
-        **Won Rock, Paper, Scissors:** {rps_win}
-        **Lost Rock, Paper, Scissors:** {rps_loss}
-        **Tied Rock, Paper, Scissors:** {rps_tie}",
-        
-        cookie_sent = user_data.cookie_sent,
-        cookie_received = user_data.cookie_received,
-        cake_sent = user_data.cake_sent,
-        cake_received = user_data.cake_received,
-        cake_glados = user_data.cake_glados,
-        slap_sent = user_data.slap_sent,
-        slap_received = user_data.slap_received,
-        tea_sent = user_data.tea_sent,
-        tea_received = user_data.tea_received,
-        bomb_sent = user_data.bomb_sent,
-        bomb_defused = user_data.bomb_defused,
-        bomb_failed = user_data.bomb_failed,
-        times_quoted = quote_data.times_quoted.unwrap(),
-        quotes_added = quote_data.quotes_added.unwrap(),
-        rps_win = user_data.rps_win,
-        rps_loss = user_data.rps_loss,
-        rps_tie = user_data.rps_tie
-    );
-
-    let stat_embed = serenity::CreateEmbed::new()
-        .title(format!("{}'s stats", user_data.display_name))
-        .thumbnail(user.face())
-        .description(embed_desc)
-        .colour(0x8caac2);
-
-    ctx.send(poise::CreateReply::default().embed(stat_embed)).await?;
+        press.create_response(
+            ctx.serenity_context(),
+            serenity::CreateInteractionResponse::UpdateMessage(
+                serenity::CreateInteractionResponseMessage::new()
+                    .embed(stat_embeds[stats_page].clone())   
+            )
+        ).await?;
+    }
+    
     Ok(())
 }
 
