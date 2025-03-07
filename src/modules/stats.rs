@@ -2,6 +2,32 @@ use crate::{data, Context, Error};
 use crate::data::{user_table_check, User};
 use poise::serenity_prelude as serenity;
 
+//---------------------
+// Stat embed page builders
+//---------------------
+fn build_general_embed(
+    amethyst_user: &User,
+    user_avatar: String,
+    vctime: String,
+    quotes_added: i64,
+    times_quoted: i64,
+) -> serenity::CreateEmbed {
+    let embed_description = format!("
+        **Time spent in VC:** {vctime}
+        
+        **Quotes added:** {quotes_added}
+        **Times quoted:** {times_quoted}",
+        );
+        
+    serenity::CreateEmbed::default()
+        .title(format!("{}'s stats", &amethyst_user.display_name))
+        .thumbnail(user_avatar)
+        .description(embed_description)
+}
+
+//---------------------
+// Commands
+//---------------------
 /// Check user stats
 #[poise::command(
     slash_command,
@@ -19,7 +45,7 @@ pub async fn stats(
         Some(u) => u,
         None => ctx.author().clone()
     };
-
+    
     let user_id = user.id;
     let guild_id = ctx.guild_id().unwrap().get();
     user_table_check(ctx, &user).await;
@@ -41,7 +67,7 @@ pub async fn stats(
         .await
         .unwrap();
     
-    // Build stats embed
+    // Build stats embeds
     let user_data = sqlx::query_as!(User, "SELECT * FROM users WHERE guild_id = ? AND user_id = ?", guild_id, user_id.get())
         .fetch_one(&ctx.data().database)
         .await
@@ -52,6 +78,12 @@ pub async fn stats(
         (user_data.vctrack_total_time / 60) % 60,
         user_data.vctrack_total_time % 60,
     );
+    
+    let stat_embeds: [serenity::CreateEmbed; 1] = [
+        build_general_embed(&user_data, user.avatar_url().unwrap_or(String::new()), vctime, quote_data.quotes_added.unwrap(), quote_data.times_quoted.unwrap())  
+    ];
+    
+    ctx.send(poise::CreateReply::default().embed(stat_embeds[0].clone())).await?;
     
     Ok(())
 }
