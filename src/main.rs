@@ -265,6 +265,7 @@ async fn main() {
 
                 minigames::bomb::bomb(),
                 minigames::rockpaperscisso::rps(),
+                minigames::roulette::roulette(),
             ],
             pre_command: |ctx| {
                 Box::pin(async move {
