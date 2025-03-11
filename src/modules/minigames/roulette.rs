@@ -23,7 +23,6 @@ pub async fn roulette(ctx: Context<'_>) -> Result<(), Error> {
         .unwrap();
     
     // If game is new, set it up
-    println!("OLD: {:?}", roulette);
     if roulette.roulette_chamber == 0 {
         roulette.roulette_chamber = {
             let mut rng = thread_rng();
@@ -33,17 +32,32 @@ pub async fn roulette(ctx: Context<'_>) -> Result<(), Error> {
     
     // Increment counter and run round
     roulette.roulette_count += 1;
-    println!("NEW: {:?}", roulette);
     
     if roulette.roulette_count == roulette.roulette_chamber {
-        ctx.say("Bang!").await?;
+        let gif_url = "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdGxqdWJwdTk5dGV6a2c4eTc3ZWhxdmc3MnZtcW5qMGRobHE5Yms1OCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3ohuPh9eyi4Av2DlM4/giphy.gif";
+        let msg = format!("You pick it up and...BANG!");
+        
+        let embed = serenity::CreateEmbed::new()
+            .description(msg)
+            .image(gif_url)
+            .colour(0xFF0000);
+            
+        ctx.send(poise::CreateReply::default().embed(embed)).await?;
         
         sqlx::query!("UPDATE guild_settings SET roulette_chamber = 0, roulette_count = 0 WHERE guild_id = ?", guild_id)
             .execute(&ctx.data().database)
             .await
             .unwrap();
     } else {
-        ctx.say("Click!").await?;
+        let gif_url = "https://c.tenor.com/Zv53CH35UVAAAAAd/tenor.gif";
+        let msg = format!("{}, you hear a click and nothing happens! You have survvied the attempt.", ctx.author());
+        
+        let embed = serenity::CreateEmbed::new()
+            .description(msg)
+            .image(gif_url)
+            .colour(0x00FF00);
+            
+        ctx.send(poise::CreateReply::default().embed(embed)).await?;
         
         sqlx::query!("UPDATE guild_settings SET roulette_chamber = ?, roulette_count = ? WHERE guild_id = ?", roulette.roulette_chamber, roulette.roulette_count, guild_id)
             .execute(&ctx.data().database)
