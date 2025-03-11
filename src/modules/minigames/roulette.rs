@@ -56,7 +56,7 @@ pub async fn roulette(ctx: Context<'_>) -> Result<(), Error> {
             .unwrap();
     } else {
         let gif_url = "https://c.tenor.com/Zv53CH35UVAAAAAd/tenor.gif";
-        let msg = format!("{}, you hear a click and nothing happens! You have survvied the attempt.", ctx.author());
+        let msg = format!("{}, you hear a click and nothing happens! You have survived the attempt.", ctx.author());
         
         let embed = serenity::CreateEmbed::new()
             .description(msg)
