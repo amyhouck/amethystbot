@@ -73,14 +73,17 @@ fn build_minigames_embed(
         
         **Won Rock, Paper, Scissors:** {rps_win}
         **Lost Rock, Paper, Scissors:** {rps_loss}
-        **Tied Rock, Paper, Scissors:** {rps_tie}",
+        **Tied Rock, Paper, Scissors:** {rps_tie}
+        
+        **Lost Russian Roulette:** {roulette_deaths}",
         
         bomb_sent = user_data.bomb_sent,
         bomb_defused = user_data.bomb_defused,
         bomb_failed = user_data.bomb_failed,
         rps_win = user_data.rps_win,
         rps_loss = user_data.rps_loss,
-        rps_tie = user_data.rps_tie
+        rps_tie = user_data.rps_tie,
+        roulette_deaths = user_data.roulette_deaths
     );
     
     serenity::CreateEmbed::default()

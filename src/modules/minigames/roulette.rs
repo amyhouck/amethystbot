@@ -48,6 +48,12 @@ pub async fn roulette(ctx: Context<'_>) -> Result<(), Error> {
             .execute(&ctx.data().database)
             .await
             .unwrap();
+            
+        let user_id = ctx.author().id.get();
+        sqlx::query!("UPDATE users SET roulette_deaths = roulette_deaths + 1 WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
     } else {
         let gif_url = "https://c.tenor.com/Zv53CH35UVAAAAAd/tenor.gif";
         let msg = format!("{}, you hear a click and nothing happens! You have survvied the attempt.", ctx.author());

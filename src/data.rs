@@ -138,7 +138,8 @@ pub struct User {
     pub display_name: String,
     pub rps_win: u32,
     pub rps_loss: u32,
-    pub rps_tie: u32
+    pub rps_tie: u32,
+    pub roulette_deaths: u32,
 }
 
 //--------------------------
