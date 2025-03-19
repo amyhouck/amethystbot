@@ -135,7 +135,8 @@ async fn check_gif_role(ctx: Context<'_>) -> Result<bool, Error> {
 #[poise::command(
     slash_command,
     guild_only,
-    check = "check_gif_role"
+    check = "check_gif_role",
+    member_cooldown = 5,
 )]
 pub async fn addgif(
     ctx: Context<'_>,
@@ -171,7 +172,8 @@ pub async fn addgif(
 #[poise::command(
     slash_command,
     guild_only,
-    check = "check_gif_role"
+    check = "check_gif_role",
+    member_cooldown = 5,
 )]
 pub async fn delgif(
     ctx: Context<'_>,
@@ -214,7 +216,8 @@ pub async fn delgif(
 /// List the custom GIFs set for a command
 #[poise::command(
     slash_command,
-    guild_only
+    guild_only,
+    member_cooldown = 5,
 )]
 pub async fn listgifs(
     ctx: Context<'_>,
@@ -295,7 +298,8 @@ pub async fn listgifs(
 #[poise::command(
     slash_command,
     guild_only,
-    required_permissions = "MANAGE_CHANNELS"
+    required_permissions = "MANAGE_CHANNELS",
+    member_cooldown = 5,
 )]
 pub async fn setgifrole(
     ctx: Context<'_>,

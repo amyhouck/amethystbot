@@ -11,7 +11,8 @@ struct Roulette {
 /// Try your luck with Russian Roulette
 #[poise::command(
     slash_command,
-    guild_only
+    guild_only,
+    member_cooldown = 60
 )]
 pub async fn roulette(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();

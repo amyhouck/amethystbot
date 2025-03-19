@@ -4,7 +4,8 @@ use poise::serenity_prelude as serenity;
 #[poise::command(
     slash_command,
     guild_only,
-    subcommands("setmessage", "setimage", "setchannel")
+    subcommands("setmessage", "setimage", "setchannel"),
+    member_cooldown = 5,
 )]
 pub async fn welcome(_: Context<'_>) -> Result<(), Error> {
     Ok(())

@@ -13,7 +13,8 @@ enum VCTopType {
     slash_command,
     guild_only,
     required_permissions = "MANAGE_CHANNELS",
-    subcommands("ignorechannel")
+    subcommands("ignorechannel"),
+    member_cooldown = 5,
 )]
 pub async fn vctracker(_: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -49,7 +50,8 @@ pub async fn ignorechannel(
 /// List the top 10 times in VC.
 #[poise::command(
     slash_command,
-    guild_only
+    guild_only,
+    member_cooldown = 5,
 )]
 pub async fn vctop(
     ctx: Context<'_>,
