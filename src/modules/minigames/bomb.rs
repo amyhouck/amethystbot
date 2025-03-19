@@ -1,4 +1,4 @@
-use crate::{user_table_check, log, Context, Error};
+use crate::{user_table_check, Context, Error};
 use poise::serenity_prelude as serenity;
 use rand::{Rng, thread_rng};
 use chrono::Utc;
@@ -29,12 +29,8 @@ pub async fn bomb(
     ctx: Context<'_>,
     #[description = "The user you'd like to bomb."] target: serenity::User
 ) -> Result<(), Error> {
-    // Don't allow attacking self
-    if &target == ctx.author() {
-        log::write_log(log::LogType::CommandError { ctx  });
-
-        return Err("You can't do that!".into());
-    }
+    // Disable stat queries if targeting self
+    let targeting_self = ctx.author() == &target;
 
     // Build bomb
     let ctx_id = ctx.id();
@@ -91,11 +87,13 @@ pub async fn bomb(
         .components(vec![buttons])).await?;
 
     // Handle stats and check for target
-    user_table_check(ctx, &target).await;
-    sqlx::query!("UPDATE users SET bomb_sent = bomb_sent + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.sender)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
+    if !targeting_self {
+        user_table_check(ctx, &target).await;
+        sqlx::query!("UPDATE users SET bomb_sent = bomb_sent + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.sender)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+    }
 
     // Button clicking event
     while let Some(press) = serenity::collector::ComponentInteractionCollector::new(ctx)
@@ -135,10 +133,12 @@ pub async fn bomb(
             press.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
 
             // Handle stats for target
-            sqlx::query!("UPDATE users SET bomb_defused = bomb_defused + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.target)
-                .execute(&ctx.data().database)
-                .await
-                .unwrap();
+            if !targeting_self {
+                sqlx::query!("UPDATE users SET bomb_defused = bomb_defused + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.target)
+                    .execute(&ctx.data().database)
+                    .await
+                    .unwrap();
+            }
 
             break;
         }
@@ -159,10 +159,12 @@ pub async fn bomb(
             press.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
 
             // Handle target stats
-            sqlx::query!("UPDATE users SET bomb_failed = bomb_failed + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.target)
-                .execute(&ctx.data().database)
-                .await
-                .unwrap();
+            if !targeting_self {
+                sqlx::query!("UPDATE users SET bomb_failed = bomb_failed + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.target)
+                    .execute(&ctx.data().database)
+                    .await
+                    .unwrap();
+            }
 
             break;
         }
@@ -179,10 +181,12 @@ pub async fn bomb(
             .components(Vec::new())
         ).await?;
 
-        sqlx::query!("UPDATE users SET bomb_failed = bomb_failed + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.target)
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
+        if !targeting_self {
+            sqlx::query!("UPDATE users SET bomb_failed = bomb_failed + 1 WHERE guild_id = ? AND user_id = ?", bomb.guild_id, bomb.target)
+                .execute(&ctx.data().database)
+                .await
+                .unwrap();
+        }
     }
 
     Ok(())
