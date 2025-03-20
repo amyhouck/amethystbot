@@ -45,6 +45,7 @@ pub async fn ignorechannel(
     slash_command,
     guild_only,
     member_cooldown = 5,
+    ephemeral
 )]
 pub async fn vctop(
     ctx: Context<'_>,
