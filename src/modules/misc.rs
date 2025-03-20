@@ -23,7 +23,7 @@ pub async fn slap(
 
     let slap_gif = grab_custom_gifs(&ctx.data().database, gif_type, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
 
-    let random_gif = if slap_gif.len() > 0 {
+    let random_gif = if !slap_gif.is_empty() {
         &slap_gif[0].gif_url
     } else {
         ""
@@ -92,7 +92,7 @@ pub async fn cookie(
 
     let cookie_gif = grab_custom_gifs(&ctx.data().database, gif_type, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
 
-    let embed_image = if cookie_gif.len() > 0 {
+    let embed_image = if !cookie_gif.is_empty() {
         &cookie_gif[0].gif_url
     } else {
          ""
@@ -141,7 +141,7 @@ pub async fn tea(
 ) -> Result<(), Error> {
     let tea_gif = grab_custom_gifs(&ctx.data().database, GIFType::Tea, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
 
-    let embed_gif = if tea_gif.len() > 0 {
+    let embed_gif = if !tea_gif.is_empty() {
         &tea_gif[0].gif_url
     } else {
         ""
@@ -197,7 +197,7 @@ pub async fn cake(
     };
 
     // Set message info
-    let mut embed_gif = if cake_gif.len() > 0 {
+    let mut embed_gif = if !cake_gif.is_empty() {
             &cake_gif[0].gif_url
         } else {
             ""

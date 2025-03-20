@@ -15,16 +15,16 @@ pub enum GIFType {
     Tea
 }
 
-impl ToString for GIFType {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for GIFType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            GIFType::Birthday => String::from("birthday"),
-            GIFType::Cake => String::from("cake"),
-            GIFType::Cookie => String::from("cookie"),
-            GIFType::CookieSelf => String::from("cookie_self"),
-            GIFType::Slap => String::from("slap"),
-            GIFType::SlapSelf => String::from("slap_self"),
-            GIFType::Tea => String::from("tea")
+            GIFType::Birthday => write!(f, "birthday"),
+            GIFType::Cake => write!(f, "cake"),
+            GIFType::Cookie => write!(f, "cookie"),
+            GIFType::CookieSelf => write!(f, "cookie_self"),
+            GIFType::Slap => write!(f, "slap"),
+            GIFType::SlapSelf => write!(f, "slap_self"),
+            GIFType::Tea => write!(f, "tea")
         }
     }
 }

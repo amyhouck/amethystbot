@@ -429,7 +429,7 @@ pub async fn birthday_check(ctx: &serenity::Context, data: &Data) {
                     let bday_msg = format!("Happy birthday, {username}! :birthday: We hope you have a great day!");
 
                     let random_gif = {
-                        if birthday_gifs.len() > 0 {
+                        if !birthday_gifs.is_empty() {
                             let mut rng = thread_rng();
                             &birthday_gifs[rng.gen_range(0..birthday_gifs.len())].gif_url
                         } else {

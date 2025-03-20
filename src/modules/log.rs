@@ -4,7 +4,7 @@ use crate::Context;
 pub enum LogType<'a> {
     // Command Types
     CommandExecution { ctx: Context<'a> },
-    CommandError { ctx: Context<'a> },
+    // CommandError { ctx: Context<'a> },
 
     // Birthday Module
     BirthdayTimerReset { duration: String },
@@ -55,19 +55,19 @@ pub fn write_log(log_info: LogType) {
             )
         },
 
-        LogType::CommandError { ctx} => {
-            let command_location = if ctx.guild_id().is_none() {
-                String::from("User DM")
-            } else {
-                format!("Guild ID: {}", ctx.guild_id().unwrap().get())
-            };
+        // LogType::CommandError { ctx} => {
+        //     let command_location = if ctx.guild_id().is_none() {
+        //         String::from("User DM")
+        //     } else {
+        //         format!("Guild ID: {}", ctx.guild_id().unwrap().get())
+        //     };
 
-            format!("[ LOG ] Command error - {command_location} - Channel ID: {} - User ID: {} - Command String: {}",
-                ctx.channel_id().get(),
-                ctx.author().id.get(),
-                ctx.invocation_string(),
-            )
-        },
+        //     format!("[ LOG ] Command error - {command_location} - Channel ID: {} - User ID: {} - Command String: {}",
+        //         ctx.channel_id().get(),
+        //         ctx.author().id.get(),
+        //         ctx.invocation_string(),
+        //     )
+        // },
 
         // Birthday Module
         LogType::BirthdayTimerReset { duration } => format!("[ BIRTHDAY ] Duration until next birthday check: {duration}"),

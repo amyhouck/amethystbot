@@ -10,13 +10,13 @@ enum RPSChoices {
     Scissors,
 }
 
-impl ToString for RPSChoices {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for RPSChoices {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            RPSChoices::None => String::from("-------"),
-            RPSChoices::Rock => String::from("Rock"),
-            RPSChoices::Paper => String::from("Paper"),
-            RPSChoices::Scissors => String::from("Scissors")
+            RPSChoices::None => write!(f, "-------"),
+            RPSChoices::Rock => write!(f, "Rock"),
+            RPSChoices::Paper => write!(f, "Paper"),
+            RPSChoices::Scissors => write!(f, "Scissors")
         }
     }
 }
@@ -46,20 +46,20 @@ fn determine_winner_result(
 
     if *challenger_choice == RPSChoices::Rock {
         match victim_choice {
-            RPSChoices::Paper => return 2,
-            RPSChoices::Scissors => return 1,
-            _ => return 3
+            RPSChoices::Paper => 2,
+            RPSChoices::Scissors => 1,
+            _ => 3
         }
     } else if *challenger_choice == RPSChoices::Paper {
         match victim_choice {
-            RPSChoices::Rock => return 1,
-            RPSChoices::Scissors => return 2,
-            _ => return 3
+            RPSChoices::Rock => 1,
+            RPSChoices::Scissors => 2,
+            _ => 3
         }
     } else { // If challenger chose Scissors. This is to make the compiler happy and not yell at me about possibly missing an else
         match victim_choice {
-            RPSChoices::Paper => return 1,
-            RPSChoices::Rock => return 2,
+            RPSChoices::Paper => 1,
+            RPSChoices::Rock => 2,
             _ => return 3
         }
     }
@@ -127,8 +127,8 @@ pub async fn rps(
     ];
 
     // Handle message
-    let author_name = determine_display_username(&ctx.http(), &ctx.author(), ctx.guild_id().unwrap()).await;
-    let victim_name = determine_display_username(&ctx.http(), &victim, ctx.guild_id().unwrap()).await;
+    let author_name = determine_display_username(ctx.http(), ctx.author(), ctx.guild_id().unwrap()).await;
+    let victim_name = determine_display_username(ctx.http(), &victim, ctx.guild_id().unwrap()).await;
     let embed_desc = format!("{}, you have been challenged to Rock, Paper, Scissors!\n\n Players, select a choice below! You have 1 minute!", victim);
 
     let rps_embed = serenity::CreateEmbed::new()

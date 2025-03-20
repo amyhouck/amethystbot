@@ -326,7 +326,7 @@ pub async fn listquotes(
             .unwrap()
     };
 
-    if guild_quotes.len() == 0 {
+    if guild_quotes.is_empty() {
         return Err("No quotes found!".into());
     }
 

@@ -36,7 +36,7 @@ pub async fn roulette(ctx: Context<'_>) -> Result<(), Error> {
     
     if roulette.roulette_count == roulette.roulette_chamber {
         let gif_url = "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdGxqdWJwdTk5dGV6a2c4eTc3ZWhxdmc3MnZtcW5qMGRobHE5Yms1OCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3ohuPh9eyi4Av2DlM4/giphy.gif";
-        let msg = format!("You pick it up and...BANG!");
+        let msg = String::from("You pick it up and...BANG!");
         
         let embed = serenity::CreateEmbed::new()
             .description(msg)
