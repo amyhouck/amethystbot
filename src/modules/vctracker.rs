@@ -1,13 +1,6 @@
 use crate::{log, Context, Error};
 use poise::serenity_prelude as serenity;
 
-// VCTop Leaderboard Types
-#[derive(poise::ChoiceParameter)]
-enum VCTopType {
-    All,
-    Monthly
-}
-
 /// Settings for the VC time tracker
 #[poise::command(
     slash_command,
@@ -55,11 +48,7 @@ pub async fn ignorechannel(
 )]
 pub async fn vctop(
     ctx: Context<'_>,
-    #[rename = "type"]
-    #[description = "The timeframe of the leaderboard you want to see."] leaderboard_type: Option<VCTopType>,
 ) -> Result<(), Error> {
-    let leaderboard_type = leaderboard_type.unwrap_or(VCTopType::All);
-
     // Grab guild info and recheck voice times
     let guild_id = ctx.guild_id().unwrap().get();
 
@@ -73,57 +62,68 @@ pub async fn vctop(
     let futures = voice_states.iter().map(|vs| recheck_time(vs, &ctx.data().database));
     futures::future::join_all(futures).await;
 
-    // Grab and sort list
-    let times: Vec<(String, u32)> = match leaderboard_type {
-        VCTopType::All => {
-            sqlx::query!("SELECT display_name, vctrack_total_time FROM users WHERE guild_id = ? ORDER BY vctrack_total_time DESC LIMIT 10", guild_id)
-                .fetch_all(&ctx.data().database)
-                .await
-                .unwrap()
-                .iter()
-                .map(|r| (r.display_name.to_string(), r.vctrack_total_time))
-                .collect()
-        },
-        VCTopType::Monthly => {
-            sqlx::query!("SELECT display_name, vctrack_monthly_time FROM users WHERE guild_id = ? ORDER BY vctrack_monthly_time DESC LIMIT 10", guild_id)
-                .fetch_all(&ctx.data().database)
-                .await
-                .unwrap()
-                .iter()
-                .map(|r| (r.display_name.to_string(), r.vctrack_monthly_time))
-                .collect()
+    // Grab information
+    let vctop_all = sqlx::query!("SELECT display_name, vctrack_total_time FROM users WHERE guild_id = ? ORDER BY vctrack_total_time DESC LIMIT 10", guild_id)
+        .fetch_all(&ctx.data().database);
+    let vctop_monthly = sqlx::query!("SELECT display_name, vctrack_monthly_time FROM users WHERE guild_id = ? ORDER BY vctrack_monthly_time DESC LIMIT 10", guild_id)
+        .fetch_all(&ctx.data().database);
+        
+    let futures_data = futures::future::join(vctop_all, vctop_monthly).await;
+    
+    let vctop_all: Vec<(String, u32)> = futures_data.0
+        .unwrap()
+        .iter()
+        .map(|r| (r.display_name.to_string(), r.vctrack_total_time))
+        .collect();
+    let vctop_monthly: Vec<(String, u32)> = futures_data.1
+        .unwrap()
+        .iter()
+        .map(|r| (r.display_name.to_string(), r.vctrack_monthly_time))
+        .collect();
+
+    // Build embeds and do interaction
+    let vctop_pages: Vec<serenity::CreateEmbed> = vec![
+        build_vctop_embed("VCTop All-Time Leaderboard", vctop_all),
+        build_vctop_embed("VCTop Monthly Leaderboard", vctop_monthly)
+    ];
+    let mut vctop_page = 0usize;
+    
+    let ctx_id = ctx.id();
+    let alltime_id = format!("{ctx_id}alltime");
+    let monthly_id = format!("{ctx_id}monthly");
+    
+    let buttons: Vec<serenity::CreateButton> = vec![
+        serenity::CreateButton::new(&alltime_id).label("All-Time"),
+        serenity::CreateButton::new(&monthly_id).label("Monthly")
+    ];
+    let buttons = serenity::CreateActionRow::Buttons(buttons);
+    
+    ctx.send(poise::CreateReply::default()
+        .embed(vctop_pages[vctop_page].clone())
+        .components(vec![buttons])
+    ).await?;
+    
+    while let Some(press) = serenity::collector::ComponentInteractionCollector::new(ctx)
+        .filter(move |press| press.data.custom_id.starts_with(&ctx_id.to_string()))
+        .timeout(std::time::Duration::from_secs(600))
+        .await
+    {
+        if press.data.custom_id == alltime_id {
+            vctop_page = 0;
+        } else if press.data.custom_id == monthly_id {
+            vctop_page = 1;
+        } else {
+            continue;
         }
-    };
-
-    // Build embed
-    let mut embed_desc = String::new();
-
-    for (i, user) in times.iter().enumerate() {
-        // Format into embed_desc
-        embed_desc = format!("{embed_desc}**{}.** {} - {}h {}m {}s\n",
-            i + 1,
-            user.0,
-            (user.1 / 60) / 60,
-            (user.1 / 60) % 60,
-            user.1 % 60,
-        );
+        
+        press.create_response(
+            ctx.serenity_context(),
+            serenity::CreateInteractionResponse::UpdateMessage(
+                serenity::CreateInteractionResponseMessage::new()
+                    .embed(vctop_pages[vctop_page].clone())
+            )
+        ).await?;
     }
-
-    let title = match leaderboard_type {
-        VCTopType::All => "VC All-time Leaderboard",
-        VCTopType::Monthly => "VC Monthly Leaderboard",
-    };
-
-    let mut scoreboard_embed = serenity::CreateEmbed::new()
-        .title(title)
-        .colour(0xcc3842)
-        .description(embed_desc);
-
-    if ctx.guild().unwrap().icon_url().is_some() {
-        scoreboard_embed = scoreboard_embed.thumbnail(ctx.guild().unwrap().icon_url().unwrap());
-    }
-
-    ctx.send(poise::CreateReply::default().embed(scoreboard_embed)).await?;
 
     Ok(())
 }
@@ -190,4 +190,27 @@ pub async fn vctracker_reset_monthly(database: &sqlx::MySqlPool) {
 
         log::write_log(log::LogType::VCTrackerResetMonthlyComplete);
     }
+}
+
+// Build vctop embeds
+fn build_vctop_embed(
+    title: &str,
+    vctime_record: Vec<(String, u32)>,
+) -> serenity::CreateEmbed {
+    let mut embed_desc = String::new();
+    for (i, user) in vctime_record.iter().enumerate() {
+        // Format into embed_desc
+        embed_desc = format!("{embed_desc}**{}.** {} - {}h {}m {}s\n",
+            i + 1,
+            user.0,
+            (user.1 / 60) / 60,
+            (user.1 / 60) % 60,
+            user.1 % 60,
+        );
+    }
+    
+    serenity::CreateEmbed::new()
+        .title(title)
+        .colour(0xcc3842)
+        .description(embed_desc)
 }
