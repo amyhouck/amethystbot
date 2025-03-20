@@ -115,6 +115,8 @@ pub async fn addquote(
     #[description = "The quote to record."] quote: String,
     #[description = "Optionally add a date for the quote."] date: Option<String>
 ) -> Result<(), Error> {
+    ctx.defer().await?;
+    
     // Build quote then insert
     let timestamp = if date.is_some() {
         match chrono::NaiveDate::parse_from_str(&date.unwrap(), "%F") {
