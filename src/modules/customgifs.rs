@@ -1,5 +1,7 @@
 use crate::{Context, Error};
 use poise::serenity_prelude as serenity;
+use tokio::fs;
+use tokio::io::AsyncWriteExt;
 
 //--------------------
 // Data
@@ -142,28 +144,58 @@ pub async fn addgif(
     ctx: Context<'_>,
     #[description = "The command to add a GIF for"]
     command: GIFType,
+    
+    #[description = "The name of you want to give the GIF"]
+    name: String,
 
-    #[description = "The URL for the GIF"]
-    gif_url: String
+    #[description = "The GIF you want to upload"]
+    gif: serenity::Attachment,
 ) -> Result<(), Error> {
+    ctx.defer().await?;
+    
     let guild_id = ctx.guild_id().unwrap().get();
     let gif_type = command.to_string();
-
-    // Set future GIF ID
-    let gif_id = sqlx::query!("SELECT MAX(gif_id) AS gif_id FROM custom_gifs WHERE guild_id = ? AND gif_type = ?", guild_id, gif_type)
-        .fetch_one(&ctx.data().database)
-        .await
-        .unwrap()
-        .gif_id
-        .unwrap_or(0);
     
-    // Insert into DB
-    sqlx::query!("INSERT INTO custom_gifs (guild_id, gif_type, gif_id, gif_url) VALUES (?, ?, ?, ?)", guild_id, gif_type, gif_id + 1, gif_url)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
-
-    ctx.say(format!("Registered a new GIF for \"{gif_type}\"! {gif_url}")).await?;
+    // Validate if the attachment is a GIF
+    if gif.content_type != Some(String::from("image/gif")) {
+        return Err("You can only upload GIFs!".into());
+    }
+    
+    // Check file already exists with that name
+    let dir = format!("./CustomGIFs/{guild_id}/{gif_type}/");
+    let path = format!("{dir}{name}.gif");
+    match fs::try_exists(&path).await {
+        Ok(exists) => {
+            if exists {
+                return Err("A GIF with that name is already saved!".into());
+            }
+        },
+        Err(_) => return Err("Unable to determine if that GIF exists!".into())
+    }
+    
+    // Save GIF
+    let content = match gif.download().await {
+        Ok(data) => data,
+        Err(_) => return Err("There was an error trying to save the GIF!".into())
+    };
+    
+    fs::create_dir_all(&dir).await?;
+    let mut file = fs::File::create(&path).await?;
+    file.write_all(&content).await?;
+    
+    let saved_gif = serenity::CreateAttachment::path(path).await?;
+    
+    let embed = serenity::CreateEmbed::new()
+        .description(format!("Successfully saved the GIF: {name}"))
+        .colour(0x0b4a6f)
+        .image(format!("attachment://{name}.gif"));
+        
+    let msg = poise::CreateReply::default()
+        .embed(embed)
+        .attachment(saved_gif);
+        
+    ctx.send(msg).await?;
+    
 
     Ok(())
 }
