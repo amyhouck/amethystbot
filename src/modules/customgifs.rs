@@ -138,7 +138,7 @@ async fn check_gif_role(ctx: Context<'_>) -> Result<bool, Error> {
     slash_command,
     guild_only,
     check = "check_gif_role",
-    member_cooldown = 5,
+    member_cooldown = 20,
 )]
 pub async fn addgif(
     ctx: Context<'_>,
@@ -161,8 +161,21 @@ pub async fn addgif(
         return Err("You can only upload GIFs!".into());
     }
     
-    // Check file already exists with that name
+    // Make sure they don't already have 10 GIFs
     let dir = format!("./CustomGIFs/{guild_id}/{gif_type}/");
+    fs::create_dir_all(&dir).await?;
+    let mut files_in_dir = fs::read_dir(&dir).await?;
+    let mut count = 0;
+    
+    while let Some(_) = files_in_dir.next_entry().await? {
+        count += 1;
+    }
+    
+    if count >= 10 {
+        return Err("The server has reached the limit for the amount of GIFs saved for this command!".into());
+    }
+    
+    // Check file already exists with that name
     let path = format!("{dir}{name}.gif");
     match fs::try_exists(&path).await {
         Ok(exists) => {
@@ -179,7 +192,6 @@ pub async fn addgif(
         Err(_) => return Err("There was an error trying to save the GIF!".into())
     };
     
-    fs::create_dir_all(&dir).await?;
     let mut file = fs::File::create(&path).await?;
     file.write_all(&content).await?;
     
