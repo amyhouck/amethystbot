@@ -183,7 +183,9 @@ pub async fn addgif(
     let mut file = fs::File::create(&path).await?;
     file.write_all(&content).await?;
     
-    let saved_gif = serenity::CreateAttachment::path(path).await?;
+    // Create embed to show it saved
+    let filename = format!("{name}.gif");
+    let saved_gif = serenity::CreateAttachment::bytes(content, filename);
     
     let embed = serenity::CreateEmbed::new()
         .description(format!("Successfully saved the GIF: {name}"))
