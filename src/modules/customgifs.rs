@@ -2,6 +2,7 @@ use crate::{Context, Error};
 use poise::serenity_prelude as serenity;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
 //--------------------
 // Data
@@ -146,6 +147,7 @@ pub async fn addgif(
     command: GIFType,
     
     #[description = "The name of you want to give the GIF"]
+    #[max_length = 30]
     name: String,
 
     #[description = "The GIF you want to upload"]
@@ -175,8 +177,11 @@ pub async fn addgif(
         return Err("The server has reached the limit for the amount of GIFs saved for this command!".into());
     }
     
-    // Check file already exists with that name
-    let path = format!("{dir}{name}.gif");
+    // Check file already exists with that name after encoding into URL-Safe Base64
+    // I am using URL-Safe Base64 encoding so people can have some freedom as to what they name
+    // their GIFs when they're saved. It also saves me the headache of validating the names
+    let enc_name = URL_SAFE_NO_PAD.encode(&name);
+    let path = format!("{dir}{enc_name}.gif");
     match fs::try_exists(&path).await {
         Ok(exists) => {
             if exists {
@@ -196,13 +201,13 @@ pub async fn addgif(
     file.write_all(&content).await?;
     
     // Create embed to show it saved
-    let filename = format!("{name}.gif");
+    let filename = format!("{enc_name}.gif");
     let saved_gif = serenity::CreateAttachment::bytes(content, filename);
     
     let embed = serenity::CreateEmbed::new()
-        .description(format!("Successfully saved the GIF: {name}"))
+        .description(format!("Successfully saved the GIF: {name} for {command}"))
         .colour(0x0b4a6f)
-        .image(format!("attachment://{name}.gif"));
+        .image(format!("attachment://{enc_name}.gif"));
         
     let msg = poise::CreateReply::default()
         .embed(embed)
