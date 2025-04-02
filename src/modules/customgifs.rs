@@ -55,10 +55,20 @@ fn create_gif_pages(gifs: Vec<CustomGif>) -> Vec<String> {
     let mut pages: Vec<String> = Vec::new();
 
     for (i, gif) in gifs.iter().enumerate() {
-        page_content = format!("{page_content}**{}.** {}\n\n",
-            i + 1,
-            gif.filename
-        );
+        page_content = match &gif.description {
+            Some(desc) => {
+                format!("{page_content}**{}.** *{}* -- {desc}\n\n",
+                    i + 1,
+                    gif.filename
+                )
+            },
+            None => {
+                format!("{page_content}**{}.** *{}*\n\n",
+                    i + 1,
+                    gif.filename
+                )
+            }
+        };
 
         // Split content into more pages as necessary
         if i + 1 == gifs.len() {
@@ -184,6 +194,7 @@ pub async fn addgif(
     // I am using URL-Safe Base64 encoding so people can have some freedom as to what they name
     // their GIFs when they're saved. It also saves me the headache of validating the names
     let enc_name = URL_SAFE_NO_PAD.encode(&name);
+    let dir = format!("CustomGIFs/{guild_id}/{gif_type}/");
     let path = format!("{dir}{enc_name}.gif");
     match fs::try_exists(&path).await {
         Ok(exists) => {
