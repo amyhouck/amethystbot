@@ -169,16 +169,14 @@ pub async fn addgif(
     }
     
     // Make sure they don't already have 10 GIFs
-    let dir = format!("./CustomGIFs/{guild_id}/{gif_type}/");
-    fs::create_dir_all(&dir).await?;
-    let mut files_in_dir = fs::read_dir(&dir).await?;
-    let mut count = 0;
-    
-    while let Some(_) = files_in_dir.next_entry().await? {
-        count += 1;
-    }
-    
-    if count >= 10 {
+    let gif_id = sqlx::query!("SELECT MAX(gif_id) AS gif_id FROM custom_gifs WHERE guild_id = ? AND gif_type = ?", guild_id, gif_type)
+        .fetch_one(&ctx.data().database)
+        .await
+        .unwrap()
+        .gif_id
+        .unwrap_or(0);
+        
+    if gif_id >= 10 {
         return Err("The server has reached the limit for the amount of GIFs saved for this command!".into());
     }
     
@@ -206,13 +204,6 @@ pub async fn addgif(
     file.write_all(&content).await?;
     
     // Save information to database
-    let gif_id = sqlx::query!("SELECT MAX(gif_id) AS gif_id FROM custom_gifs WHERE guild_id = ? AND gif_type = ?", guild_id, gif_type)
-        .fetch_one(&ctx.data().database)
-        .await
-        .unwrap()
-        .gif_id
-        .unwrap_or(0);
-        
     sqlx::query!("INSERT INTO custom_gifs (guild_id, gif_type, gif_id, description, filename) VALUES (?, ?, ?, ?, ?)",
         guild_id, gif_type, gif_id + 1, description, &enc_name)
         .execute(&ctx.data().database)
