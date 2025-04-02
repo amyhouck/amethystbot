@@ -37,7 +37,8 @@ pub struct CustomGif {
     pub guild_id: u64,
     pub gif_type: String,
     pub gif_id: u32,
-    pub gif_url: String
+    pub description: Option<String>,
+    pub filename: String
 }
 
 pub enum GIFDBQueryType {
@@ -56,7 +57,7 @@ fn create_gif_pages(gifs: Vec<CustomGif>) -> Vec<String> {
     for (i, gif) in gifs.iter().enumerate() {
         page_content = format!("{page_content}**{}.** {}\n\n",
             i + 1,
-            gif.gif_url
+            gif.filename
         );
 
         // Split content into more pages as necessary
@@ -152,6 +153,10 @@ pub async fn addgif(
 
     #[description = "The GIF you want to upload"]
     gif: serenity::Attachment,
+    
+    #[description = "An optional description to help identify the GIF in a list"]
+    #[max_length = 100]
+    description: Option<String>
 ) -> Result<(), Error> {
     ctx.defer().await?;
     
@@ -191,7 +196,7 @@ pub async fn addgif(
         Err(_) => return Err("Unable to determine if that GIF exists!".into())
     }
     
-    // Save GIF
+    // Save GIF to files
     let content = match gif.download().await {
         Ok(data) => data,
         Err(_) => return Err("There was an error trying to save the GIF!".into())
@@ -199,6 +204,20 @@ pub async fn addgif(
     
     let mut file = fs::File::create(&path).await?;
     file.write_all(&content).await?;
+    
+    // Save information to database
+    let gif_id = sqlx::query!("SELECT MAX(gif_id) AS gif_id FROM custom_gifs WHERE guild_id = ? AND gif_type = ?", guild_id, gif_type)
+        .fetch_one(&ctx.data().database)
+        .await
+        .unwrap()
+        .gif_id
+        .unwrap_or(0);
+        
+    sqlx::query!("INSERT INTO custom_gifs (guild_id, gif_type, gif_id, description, filename) VALUES (?, ?, ?, ?, ?)",
+        guild_id, gif_type, gif_id + 1, description, &enc_name)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
     
     // Create embed to show it saved
     let filename = format!("{enc_name}.gif");
