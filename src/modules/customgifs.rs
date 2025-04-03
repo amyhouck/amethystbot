@@ -368,6 +368,67 @@ pub async fn listgifs(
     Ok(())
 }
 
+/// View a saved GIF
+#[poise::command(
+    slash_command,
+    guild_only,
+    member_cooldown = 10
+)]
+pub async fn viewgif(
+    ctx: Context<'_>,
+    
+    #[description = "The GIF type"]
+    gif_type: GIFType,
+    
+    #[description = "The GIF ID"]
+    id: u32
+) -> Result<(), Error> {
+    ctx.defer().await?;
+    let guild_id = ctx.guild_id().unwrap().get();
+    
+    // Run GIF query and validate existence
+    let gif = sqlx::query_as!(CustomGif,"SELECT * FROM custom_gifs WHERE guild_id = ? AND gif_id = ? AND gif_type = ?",
+        guild_id, id, gif_type.to_string())
+        .fetch_optional(&ctx.data().database)
+        .await
+        .unwrap();
+        
+    let gif = match gif {
+        Some(g) => g,
+        None => {
+            let msg = format!("No GIF exists with that ID for \"{gif_type}\"!");
+            return Err(msg.into());
+        }
+    };
+    
+    // Grab GIF file and send embed
+    let path = format!("CustomGIFs/{guild_id}/{gif_type}/{}.gif", &gif.filename);
+    let attachment = serenity::CreateAttachment::path(path).await?;
+    let dec_name = String::from_utf8(URL_SAFE_NO_PAD.decode(&gif.filename)?).unwrap();
+    
+    let title = format!("CustomGIF - {dec_name}");
+    let description = format!("
+        **Type:** {}
+        **Description:** {}",
+        gif.gif_type,
+        gif.description.unwrap_or(String::from("*None*"))
+    );
+    
+    let embed = serenity::CreateEmbed::new()
+        .title(title)
+        .description(description)
+        .colour(0x0b4a6f)
+        .image(format!("attachment://{}.gif", &gif.filename));
+        
+    let msg = poise::CreateReply::default()
+        .embed(embed)
+        .attachment(attachment);
+        
+    ctx.send(msg).await?;
+    
+    Ok(())
+}
+
 /// Set a required role to run custom gif commands
 #[poise::command(
     slash_command,
