@@ -89,7 +89,7 @@ fn create_gif_pages(gifs: Vec<CustomGif>) -> Vec<String> {
 // Grab specific type of GIFs for the server
 pub async fn grab_custom_gifs(
     database: &sqlx::MySqlPool,
-    gif_type: GIFType,
+    gif_type: &GIFType,
     guild_id: u64,
     query_type: GIFDBQueryType
 ) -> Vec<CustomGif> {
@@ -303,7 +303,7 @@ pub async fn listgifs(
     let gif_type_string = gif_type.to_string();
 
     // Grab relevant GIFs, return error if empty vector
-    let gifs = grab_custom_gifs(&ctx.data().database, gif_type, guild_id, GIFDBQueryType::Normal).await;
+    let gifs = grab_custom_gifs(&ctx.data().database, &gif_type, guild_id, GIFDBQueryType::Normal).await;
 
     if gifs.is_empty() {
         return Err(format!("No GIFs were found under \"{gif_type_string}\"").into());

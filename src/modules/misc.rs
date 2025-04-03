@@ -14,6 +14,8 @@ pub async fn slap(
     ctx: Context<'_>,
     #[description = "The user you'd like to slap."] mut victim: serenity::User
 ) -> Result<(), Error> {
+    let guild_id = ctx.guild_id().unwrap().get();
+    
     // All hail RNG
     let gif_type = if &victim == ctx.author() {
         GIFType::SlapSelf
@@ -21,14 +23,17 @@ pub async fn slap(
         GIFType::Slap
     };
 
-    let slap_gif = grab_custom_gifs(&ctx.data().database, gif_type, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
-
+    println!("DB QUERY");
+    let slap_gif = grab_custom_gifs(&ctx.data().database, &gif_type, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
+    println!("DB QUERY DONE");
     let random_gif = if !slap_gif.is_empty() {
-        &slap_gif[0].gif_url
+        println!("ATTACH");
+        let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", gif_type, slap_gif[0].filename);
+        Some(serenity::CreateAttachment::path(path).await?)
     } else {
-        ""
+        None
     };
-
+    println!("ATTACH DONE");
     let mut embed_msg = if &victim == ctx.author() {
         String::from("Stop hitting yourself...stop hitting yourself!")
     } else {
@@ -50,11 +55,19 @@ pub async fn slap(
     }
 
     // Build embed
-    let embed = serenity::CreateEmbed::new()
-        .description(embed_msg)
-        .image(random_gif);
+    let mut embed = serenity::CreateEmbed::new()
+        .description(embed_msg);
+        
+    let mut msg = poise::CreateReply::default()
+        .content(format!("<@{victim_id}>"));
+        
+    if let Some(att) = random_gif {
+        embed = embed.image(format!("attachment://{}.gif", slap_gif[0].filename));
+        msg = msg.attachment(att);
+    }
+    msg = msg.embed(embed);
 
-    ctx.send(poise::CreateReply::default().content(format!("<@{}>", victim_id)).embed(embed)).await?;
+    ctx.send(msg).await?;
 
     // Stat handling
     let guild_id = ctx.guild_id().unwrap().get();
@@ -84,18 +97,20 @@ pub async fn cookie(
     ctx: Context<'_>,
     #[description = "The user you'd like to cookie."] victim: serenity::User
 ) -> Result<(), Error> {
+    let guild_id = ctx.guild_id().unwrap().get();
     let gif_type = if &victim == ctx.author() {
         GIFType::CookieSelf
     } else {
         GIFType::Cookie
     };
 
-    let cookie_gif = grab_custom_gifs(&ctx.data().database, gif_type, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
+    let cookie_gif = grab_custom_gifs(&ctx.data().database, &gif_type, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
 
-    let embed_image = if !cookie_gif.is_empty() {
-        &cookie_gif[0].gif_url
+    let random_gif = if !cookie_gif.is_empty() {
+        let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", gif_type, cookie_gif[0].filename);
+        Some(serenity::CreateAttachment::path(path).await?)
     } else {
-         ""
+        None
     };
 
     let embed_msg = if ctx.author() == &victim {
@@ -104,11 +119,20 @@ pub async fn cookie(
         format!("{} has given you a cookie!", ctx.author())
     };
 
-    let embed = serenity::CreateEmbed::new()
-        .description(embed_msg)
-        .image(embed_image);
+    // Build embed
+    let mut embed = serenity::CreateEmbed::new()
+        .description(embed_msg);
+        
+    let mut msg = poise::CreateReply::default()
+        .content(format!("{victim}"));
+        
+    if let Some(att) = random_gif {
+        embed = embed.image(format!("attachment://{}.gif", cookie_gif[0].filename));
+        msg = msg.attachment(att);
+    }
+    msg = msg.embed(embed);
 
-    ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
+    ctx.send(msg).await?;
 
     // Stat handling
     let guild_id = ctx.guild_id().unwrap().get();
@@ -139,12 +163,14 @@ pub async fn tea(
     ctx: Context<'_>,
     #[description = "The user you'd like to tea."] victim: serenity::User
 ) -> Result<(), Error> {
-    let tea_gif = grab_custom_gifs(&ctx.data().database, GIFType::Tea, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
+    let guild_id = ctx.guild_id().unwrap().get();
+    let tea_gif = grab_custom_gifs(&ctx.data().database, &GIFType::Tea, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
 
-    let embed_gif = if !tea_gif.is_empty() {
-        &tea_gif[0].gif_url
+    let random_gif = if !tea_gif.is_empty() {
+        let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", GIFType::Tea, tea_gif[0].filename);
+        Some(serenity::CreateAttachment::path(path).await?)
     } else {
-        ""
+        None
     };
 
     let embed_msg = if &victim == ctx.author() {
@@ -153,11 +179,20 @@ pub async fn tea(
         format!("{} has given you some tea!", ctx.author())
     };
 
-    let embed = serenity::CreateEmbed::new()
-        .description(embed_msg)
-        .image(embed_gif);
+    // Build embed
+    let mut embed = serenity::CreateEmbed::new()
+        .description(embed_msg);
+        
+    let mut msg = poise::CreateReply::default()
+        .content(format!("{victim}"));
+        
+    if let Some(att) = random_gif {
+        embed = embed.image(format!("attachment://{}.gif", tea_gif[0].filename));
+        msg = msg.attachment(att);
+    }
+    msg = msg.embed(embed);
 
-    ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
+    ctx.send(msg).await?;
 
     // Stat handling
     let guild_id = ctx.guild_id().unwrap().get();
@@ -188,8 +223,9 @@ pub async fn cake(
     ctx: Context<'_>,
     #[description = "The user you'd like to cake."] victim: serenity::User
 ) -> Result<(), Error> {
+    let guild_id = ctx.guild_id().unwrap().get();
     // Praise the RNG
-    let cake_gif = grab_custom_gifs(&ctx.data().database, GIFType::Cake, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
+    let cake_gif = grab_custom_gifs(&ctx.data().database, &GIFType::Cake, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
 
     let glados = {
         let mut rng = thread_rng();
@@ -197,15 +233,16 @@ pub async fn cake(
     };
 
     // Set message info
-    let mut embed_gif = if !cake_gif.is_empty() {
-            &cake_gif[0].gif_url
-        } else {
-            ""
+    let random_gif = if !cake_gif.is_empty() {
+        let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", GIFType::Cake, cake_gif[0].filename);
+        Some(serenity::CreateAttachment::path(path).await?)
+    } else {
+        None
     };
 
-    if glados == 9 {
-        embed_gif = "https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif";
-    }
+    // if glados == 9 {
+    //     embed_gif = "https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif";
+    // }
 
     let embed_msg = if glados == 9 {
         String::from("***The cake is a lie***")
@@ -213,11 +250,20 @@ pub async fn cake(
         format!("{} has given you some cake! Hope you like it!", ctx.author())
     };
 
-    let embed = serenity::CreateEmbed::new()
-        .description(embed_msg)
-        .image(embed_gif);
+    // Build embed
+    let mut embed = serenity::CreateEmbed::new()
+        .description(embed_msg);
+        
+    let mut msg = poise::CreateReply::default()
+        .content(format!("{victim}"));
+        
+    if let Some(att) = random_gif {
+        embed = embed.image(format!("attachment://{}.gif", cake_gif[0].filename));
+        msg = msg.attachment(att);
+    }
+    msg = msg.embed(embed);
 
-    ctx.send(poise::CreateReply::default().content(format!("{}", victim)).embed(embed)).await?;
+    ctx.send(msg).await?;
 
     // Stat handling
     let guild_id = ctx.guild_id().unwrap().get();

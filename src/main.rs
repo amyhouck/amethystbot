@@ -242,10 +242,10 @@ async fn main() {
         .options(poise::FrameworkOptions {
             commands: vec![
                 birthday::bday(),
-                // misc::slap(),
-                // misc::cookie(),
-                // misc::tea(),
-                // misc::cake(),
+                misc::slap(),
+                misc::cookie(),
+                misc::tea(),
+                misc::cake(),
                 welcome::welcome(),
                 welcome::setleavechannel(),
                 mtg::mtg(),
