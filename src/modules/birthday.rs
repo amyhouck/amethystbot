@@ -428,24 +428,30 @@ pub async fn birthday_check(ctx: &serenity::Context, data: &Data) {
                     // Take care of the birthday message
                     let bday_msg = format!("Happy birthday, {username}! :birthday: We hope you have a great day!");
 
-                    let random_gif = {
-                        if !birthday_gifs.is_empty() {
-                            let mut rng = thread_rng();
-                            &birthday_gifs[rng.gen_range(0..birthday_gifs.len())].gif_url
-                        } else {
-                            ""
-                        }
-                    };
-
-                    let embed = serenity::CreateEmbed::new()
+                    let mut embed = serenity::CreateEmbed::new()
                         .colour(0xFF0095)
                         .thumbnail("https://media.istockphoto.com/vectors/birthday-cake-vector-isolated-vector-id901911608?k=6&m=901911608&s=612x612&w=0&h=d6v27h_mYUaUe0iSrtoX5fTw-2wGVIY4UTbQPeI-T5k=")
-                        .title(bday_msg)
-                        .image(random_gif);
+                        .title(bday_msg);
 
-                    let msg = serenity::CreateMessage::new()
-                        .content("@everyone :birthday:")
-                        .embed(embed);
+                    let mut msg = serenity::CreateMessage::new()
+                        .content("@everyone :birthday:");
+
+                    // Add GIF if one is possible to the message
+                    let random_gif = if !birthday_gifs.is_empty() {
+                        let mut rng = thread_rng();
+                        Some(&birthday_gifs[rng.gen_range(0..birthday_gifs.len())].filename)
+                    } else {
+                        None
+                    };
+                        
+                    if let Some(filename) = random_gif {
+                        let path = format!("CustomGIFs/{}/birthday/{filename}.gif", birthday.guild_id);
+                        let gif = serenity::CreateAttachment::path(path).await.unwrap();
+                    
+                        embed = embed.image(format!("attachment://{filename}.gif"));
+                        msg = msg.add_file(gif);
+                    }
+                    msg = msg.embed(embed);
 
                     channel_id.send_message(&ctx, msg).await.unwrap();
 

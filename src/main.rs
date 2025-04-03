@@ -25,7 +25,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             let new_data = Arc::clone(&data);
             tokio::spawn(async move {
                 loop {
-                    //birthday::birthday_check(&new_ctx, &new_data).await;
+                    birthday::birthday_check(&new_ctx, &new_data).await;
 
                     // Calculate sleep until the next proper birthday time
                     let current_time = chrono::Utc::now();
@@ -241,7 +241,7 @@ async fn main() {
         })
         .options(poise::FrameworkOptions {
             commands: vec![
-                // birthday::bday(),
+                birthday::bday(),
                 // misc::slap(),
                 // misc::cookie(),
                 // misc::tea(),
