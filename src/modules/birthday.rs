@@ -196,7 +196,7 @@ pub async fn edit (
     #[min = 1_u8]
     #[max = 31_u8] day: Option<u8>,
     #[description = "A nickname for the user."]
-    #[max_length = 30] nickname: Option<String>,
+    #[max_length = 30] mut nickname: Option<String>,
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
     let user_id = user.id.get();
@@ -218,7 +218,10 @@ pub async fn edit (
     // Build and execute query
     let birthmonth = month.unwrap_or(birthday_info.as_ref().unwrap().birthmonth);
     let birthday = day.unwrap_or(birthday_info.as_ref().unwrap().birthday);
-    let nickname = nickname.unwrap_or(birthday_info.unwrap().nickname.unwrap_or(String::new()));
+    
+    if nickname.is_none() {
+        nickname = birthday_info.unwrap().nickname;
+    }
 
     sqlx::query!("UPDATE birthday SET birthmonth = ?, birthday = ?, nickname = ? WHERE guild_id = ? AND user_id = ?", birthmonth, birthday, nickname, guild_id, user_id)
         .execute(&ctx.data().database)
@@ -343,6 +346,7 @@ pub async fn list(
     #[max = 12_u8] 
     #[description = "Optionally only list birthdays for a specific month."] month: Option<u8>
 ) -> Result<(), Error> {
+    ctx.defer().await?;
     let guild_id = ctx.guild_id().unwrap().get();
 
     // Fetch any birthdays if any
