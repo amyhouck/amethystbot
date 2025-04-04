@@ -23,17 +23,13 @@ pub async fn slap(
         GIFType::Slap
     };
 
-    println!("DB QUERY");
     let slap_gif = grab_custom_gifs(&ctx.data().database, &gif_type, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
-    println!("DB QUERY DONE");
     let random_gif = if !slap_gif.is_empty() {
-        println!("ATTACH");
         let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", gif_type, slap_gif[0].filename);
         Some(serenity::CreateAttachment::path(path).await?)
     } else {
         None
     };
-    println!("ATTACH DONE");
     let mut embed_msg = if &victim == ctx.author() {
         String::from("Stop hitting yourself...stop hitting yourself!")
     } else {
