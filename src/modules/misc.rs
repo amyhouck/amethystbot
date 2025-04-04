@@ -4,6 +4,22 @@ use crate::customgifs::{grab_custom_gifs, GIFType, GIFDBQueryType};
 use poise::serenity_prelude as serenity;
 use rand::{Rng, thread_rng};
 
+// Grab random GIF attachment.
+async fn grab_misc_gif(
+    database: &sqlx::MySqlPool,
+    guild_id: u64,
+    gif_type: GIFType
+) -> Option<serenity::CreateAttachment> {
+    let random_gif = grab_custom_gifs(database, &gif_type, guild_id, GIFDBQueryType::SingleRandom).await;
+    
+    if !random_gif.is_empty() {
+        let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", gif_type, random_gif[0].filename);
+        Some(serenity::CreateAttachment::path(path).await.unwrap())
+    } else {
+        None
+    }
+}
+
 /// Slap slap slap, clap clap clap
 #[poise::command(
     slash_command,
@@ -12,7 +28,7 @@ use rand::{Rng, thread_rng};
 )]
 pub async fn slap(
     ctx: Context<'_>,
-    #[description = "The user you'd like to slap."] mut victim: serenity::User
+    #[description = "The user you'd like to slap."] victim: serenity::User
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
     
@@ -22,33 +38,17 @@ pub async fn slap(
     } else {
         GIFType::Slap
     };
-
-    let slap_gif = grab_custom_gifs(&ctx.data().database, &gif_type, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
-    let random_gif = if !slap_gif.is_empty() {
-        let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", gif_type, slap_gif[0].filename);
-        Some(serenity::CreateAttachment::path(path).await?)
-    } else {
-        None
-    };
-    let mut embed_msg = if &victim == ctx.author() {
+    
+    let random_gif = grab_misc_gif(&ctx.data().database, guild_id, gif_type).await;
+    
+    let embed_msg = if &victim == ctx.author() {
         String::from("Stop hitting yourself...stop hitting yourself!")
     } else {
         format!("{} slaps you around a bit with a large trout!", ctx.author())
     };
 
     // Switch to using the victim's ID
-    let mut victim_id = victim.id.get();
-
-    let funny = {
-        let mut rng = thread_rng();
-        rng.gen_range(1..=15)
-    };
-
-    if ctx.guild_id().unwrap().get() == 545745915151908865 && funny == 3 {
-        victim_id = 499008692503707658;
-        embed_msg = format!("{} tried to slap {} but hit <@{}> instead!", ctx.author(), victim, victim_id);
-        victim = serenity::UserId::from(victim_id).to_user(ctx.http()).await.unwrap();
-    }
+    let victim_id = victim.id.get();
 
     // Build embed
     let mut embed = serenity::CreateEmbed::new()
@@ -58,7 +58,7 @@ pub async fn slap(
         .content(format!("<@{victim_id}>"));
         
     if let Some(att) = random_gif {
-        embed = embed.image(format!("attachment://{}.gif", slap_gif[0].filename));
+        embed = embed.image(format!("attachment://{}",  att.filename));
         msg = msg.attachment(att);
     }
     msg = msg.embed(embed);
@@ -100,14 +100,7 @@ pub async fn cookie(
         GIFType::Cookie
     };
 
-    let cookie_gif = grab_custom_gifs(&ctx.data().database, &gif_type, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
-
-    let random_gif = if !cookie_gif.is_empty() {
-        let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", gif_type, cookie_gif[0].filename);
-        Some(serenity::CreateAttachment::path(path).await?)
-    } else {
-        None
-    };
+    let random_gif = grab_misc_gif(&ctx.data().database, guild_id, gif_type).await;
 
     let embed_msg = if ctx.author() == &victim {
         String::from("NO! NO COOKIES FOR YOU!")
@@ -123,7 +116,7 @@ pub async fn cookie(
         .content(format!("{victim}"));
         
     if let Some(att) = random_gif {
-        embed = embed.image(format!("attachment://{}.gif", cookie_gif[0].filename));
+        embed = embed.image(format!("attachment://{}.gif", att.filename));
         msg = msg.attachment(att);
     }
     msg = msg.embed(embed);
@@ -160,14 +153,8 @@ pub async fn tea(
     #[description = "The user you'd like to tea."] victim: serenity::User
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
-    let tea_gif = grab_custom_gifs(&ctx.data().database, &GIFType::Tea, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
-
-    let random_gif = if !tea_gif.is_empty() {
-        let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", GIFType::Tea, tea_gif[0].filename);
-        Some(serenity::CreateAttachment::path(path).await?)
-    } else {
-        None
-    };
+    
+    let random_gif = grab_misc_gif(&ctx.data().database, guild_id, GIFType::Tea).await;
 
     let embed_msg = if &victim == ctx.author() {
         String::from("You have received some tea!")
@@ -183,7 +170,7 @@ pub async fn tea(
         .content(format!("{victim}"));
         
     if let Some(att) = random_gif {
-        embed = embed.image(format!("attachment://{}.gif", tea_gif[0].filename));
+        embed = embed.image(format!("attachment://{}.gif", att.filename));
         msg = msg.attachment(att);
     }
     msg = msg.embed(embed);
@@ -221,7 +208,7 @@ pub async fn cake(
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
     // Praise the RNG
-    let cake_gif = grab_custom_gifs(&ctx.data().database, &GIFType::Cake, ctx.guild_id().unwrap().get(), GIFDBQueryType::SingleRandom).await;
+    let random_gif = grab_misc_gif(&ctx.data().database, guild_id, GIFType::Cake).await;
 
     let glados = {
         let mut rng = thread_rng();
@@ -229,12 +216,6 @@ pub async fn cake(
     };
 
     // Set message info
-    let random_gif = if !cake_gif.is_empty() {
-        let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", GIFType::Cake, cake_gif[0].filename);
-        Some(serenity::CreateAttachment::path(path).await?)
-    } else {
-        None
-    };
 
     // if glados == 9 {
     //     embed_gif = "https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif";
@@ -254,7 +235,7 @@ pub async fn cake(
         .content(format!("{victim}"));
         
     if let Some(att) = random_gif {
-        embed = embed.image(format!("attachment://{}.gif", cake_gif[0].filename));
+        embed = embed.image(format!("attachment://{}.gif", att.filename));
         msg = msg.attachment(att);
     }
     msg = msg.embed(embed);
