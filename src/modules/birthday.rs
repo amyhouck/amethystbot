@@ -196,7 +196,7 @@ pub async fn edit (
     #[min = 1_u8]
     #[max = 31_u8] day: Option<u8>,
     #[description = "A nickname for the user."]
-    #[max_length = 30] mut nickname: Option<String>,
+    #[max_length = 30] nickname: Option<String>,
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap().get();
     let user_id = user.id.get();
@@ -218,10 +218,7 @@ pub async fn edit (
     // Build and execute query
     let birthmonth = month.unwrap_or(birthday_info.as_ref().unwrap().birthmonth);
     let birthday = day.unwrap_or(birthday_info.as_ref().unwrap().birthday);
-    
-    if nickname.is_none() {
-        nickname = birthday_info.unwrap().nickname;
-    }
+    let nickname = nickname.unwrap_or(birthday_info.unwrap().nickname.unwrap_or(String::new()));
 
     sqlx::query!("UPDATE birthday SET birthmonth = ?, birthday = ?, nickname = ? WHERE guild_id = ? AND user_id = ?", birthmonth, birthday, nickname, guild_id, user_id)
         .execute(&ctx.data().database)
@@ -346,7 +343,6 @@ pub async fn list(
     #[max = 12_u8] 
     #[description = "Optionally only list birthdays for a specific month."] month: Option<u8>
 ) -> Result<(), Error> {
-    ctx.defer().await?;
     let guild_id = ctx.guild_id().unwrap().get();
 
     // Fetch any birthdays if any
@@ -423,7 +419,7 @@ pub async fn birthday_check(ctx: &serenity::Context, data: &Data) {
                 .await
                 .unwrap();
 
-            let birthday_gifs = grab_custom_gifs(&data.database, &GIFType::Birthday, guild.guild_id, GIFDBQueryType::Normal).await;
+            let birthday_gifs = grab_custom_gifs(&data.database, GIFType::Birthday, guild.guild_id, GIFDBQueryType::Normal).await;
 
             for birthday in guild_birthdays {
                 if birthday.birthmonth == current_date[0] && birthday.birthday == current_date[1] {
@@ -432,30 +428,24 @@ pub async fn birthday_check(ctx: &serenity::Context, data: &Data) {
                     // Take care of the birthday message
                     let bday_msg = format!("Happy birthday, {username}! :birthday: We hope you have a great day!");
 
-                    let mut embed = serenity::CreateEmbed::new()
+                    let random_gif = {
+                        if !birthday_gifs.is_empty() {
+                            let mut rng = thread_rng();
+                            &birthday_gifs[rng.gen_range(0..birthday_gifs.len())].gif_url
+                        } else {
+                            ""
+                        }
+                    };
+
+                    let embed = serenity::CreateEmbed::new()
                         .colour(0xFF0095)
                         .thumbnail("https://media.istockphoto.com/vectors/birthday-cake-vector-isolated-vector-id901911608?k=6&m=901911608&s=612x612&w=0&h=d6v27h_mYUaUe0iSrtoX5fTw-2wGVIY4UTbQPeI-T5k=")
-                        .title(bday_msg);
+                        .title(bday_msg)
+                        .image(random_gif);
 
-                    let mut msg = serenity::CreateMessage::new()
-                        .content("@everyone :birthday:");
-
-                    // Add GIF if one is possible to the message
-                    let random_gif = if !birthday_gifs.is_empty() {
-                        let mut rng = thread_rng();
-                        Some(&birthday_gifs[rng.gen_range(0..birthday_gifs.len())].filename)
-                    } else {
-                        None
-                    };
-                        
-                    if let Some(filename) = random_gif {
-                        let path = format!("CustomGIFs/{}/birthday/{filename}.gif", birthday.guild_id);
-                        let gif = serenity::CreateAttachment::path(path).await.unwrap();
-                    
-                        embed = embed.image(format!("attachment://{filename}.gif"));
-                        msg = msg.add_file(gif);
-                    }
-                    msg = msg.embed(embed);
+                    let msg = serenity::CreateMessage::new()
+                        .content("@everyone :birthday:")
+                        .embed(embed);
 
                     channel_id.send_message(&ctx, msg).await.unwrap();
 

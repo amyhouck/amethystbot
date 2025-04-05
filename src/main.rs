@@ -262,7 +262,6 @@ async fn main() {
                 customgifs::delgif(),
                 customgifs::listgifs(),
                 customgifs::setgifrole(),
-                customgifs::viewgif(),
 
                 minigames::bomb::bomb(),
                 minigames::rockpaperscisso::rps(),
