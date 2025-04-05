@@ -16,12 +16,12 @@ async fn grab_misc_gif(
     database: &sqlx::MySqlPool,
     guild_id: u64,
     gif_type: &GIFType
-) -> Option<serenity::CreateAttachment> {
-    let random_gif = grab_custom_gifs(database, &gif_type, guild_id, GIFDBQueryType::SingleRandom).await;
+) -> Option<String> {
+    let random_gif = grab_custom_gifs(database, gif_type, guild_id, GIFDBQueryType::SingleRandom).await;
     
     if !random_gif.is_empty() {
-        let path = format!("CustomGIFs/{guild_id}/{}/{}.gif", gif_type, random_gif[0].filename);
-        Some(serenity::CreateAttachment::path(path).await.unwrap())
+        let url = random_gif[0].gif_url.to_owned();
+        Some(url)
     } else {
         None
     }
@@ -131,21 +131,6 @@ pub async fn cake(
     #[description = "The user you'd like to cake."] victim: serenity::User
 ) -> Result<(), Error> {
     misc_container(ctx, MiscCommand::Cake, victim).await?;
-    
-    // let glados = {
-    //     let mut rng = thread_rng();
-    //     rng.gen_range(1..=13)
-    // };
-
-    // Set message info
-
-    // if glados == 9 {
-    //     embed_gif = "https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif";
-    // }
-
-    // let embed_msg = if glados == 9 {
-    //     String::from("***The cake is a lie***")
-    // }
 
     // // Stat handling
     // let guild_id = ctx.guild_id().unwrap().get();
@@ -200,7 +185,7 @@ async fn misc_container(
         MiscCommand::Cake => GIFType::Cake
     };
     
-    let random_gif = grab_misc_gif(&ctx.data().database, guild_id, &gif_type).await;
+    let mut random_gif = grab_misc_gif(&ctx.data().database, guild_id, &gif_type).await;
     
     // Determine embed message
     let msg = match gif_type {
@@ -214,7 +199,15 @@ async fn misc_container(
         GIFType::Slap => format!("{} slaps you around a bit with a large trout!", ctx.author()),
         GIFType::SlapSelf => format!("Stop hitting yourself! Stop hitting yourself!"),
         GIFType::Cake => {
-            format!("{} has given you some cake! Hope you like it!", ctx.author())
+            let mut rng = thread_rng();
+            let glados = rng.gen_range(1..=13);
+            
+            if glados == 9 {
+                random_gif = Some(String::from("https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif"));
+                String::from("***The cake is a lie***")
+            } else {
+                format!("{} has given you some cake! Hope you like it!", ctx.author())
+            }
         },
         GIFType::Cookie => format!("You have received a cookie from {}!", ctx.author()),
         GIFType::CookieSelf => String::from("NO! No cookies for you!"),
@@ -225,16 +218,15 @@ async fn misc_container(
     let mut embed = serenity::CreateEmbed::new()
         .description(msg);
         
-    let mut reply = serenity::CreateMessage::new()
+    let mut reply = poise::CreateReply::default()
         .content(format!("{victim}"));
         
-    if let Some(att) = random_gif {
-        embed = embed.image(format!("attachment://{}.gif", att.filename));
-        reply = reply.add_file(att);
+    if let Some(url) = random_gif {
+        embed = embed.image(url);
     }
     reply = reply.embed(embed);
     
-    ctx.channel_id().send_message(ctx.http(), reply).await?;
+    ctx.send(reply).await?;
     
     Ok(())
 }

@@ -34,7 +34,8 @@ pub struct CustomGif {
     pub guild_id: u64,
     pub gif_type: String,
     pub gif_id: u32,
-    pub gif_url: String
+    pub gif_url: String,
+    pub gif_name: String,
 }
 
 pub enum GIFDBQueryType {
@@ -74,7 +75,7 @@ fn create_gif_pages(gifs: Vec<CustomGif>) -> Vec<String> {
 // Grab specific type of GIFs for the server
 pub async fn grab_custom_gifs(
     database: &sqlx::MySqlPool,
-    gif_type: GIFType,
+    gif_type: &GIFType,
     guild_id: u64,
     query_type: GIFDBQueryType
 ) -> Vec<CustomGif> {
@@ -143,6 +144,10 @@ pub async fn addgif(
     #[description = "The command to add a GIF for"]
     command: GIFType,
 
+    #[description = "An identifying name for the GIF"]
+    #[max_length = 30]
+    gif_name: String,
+    
     #[description = "The URL for the GIF"]
     gif_url: String
 ) -> Result<(), Error> {
@@ -158,7 +163,7 @@ pub async fn addgif(
         .unwrap_or(0);
     
     // Insert into DB
-    sqlx::query!("INSERT INTO custom_gifs (guild_id, gif_type, gif_id, gif_url) VALUES (?, ?, ?, ?)", guild_id, gif_type, gif_id + 1, gif_url)
+    sqlx::query!("INSERT INTO custom_gifs (guild_id, gif_type, gif_id, gif_url, gif_name) VALUES (?, ?, ?, ?, ?)", guild_id, gif_type, gif_id + 1, gif_url, gif_name)
         .execute(&ctx.data().database)
         .await
         .unwrap();
@@ -229,7 +234,7 @@ pub async fn listgifs(
     let gif_type_string = gif_type.to_string();
 
     // Grab relevant GIFs, return error if empty vector
-    let gifs = grab_custom_gifs(&ctx.data().database, gif_type, guild_id, GIFDBQueryType::Normal).await;
+    let gifs = grab_custom_gifs(&ctx.data().database, &gif_type, guild_id, GIFDBQueryType::Normal).await;
 
     if gifs.is_empty() {
         return Err(format!("No GIFs were found under \"{gif_type_string}\"").into());
