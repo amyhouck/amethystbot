@@ -11,6 +11,17 @@ enum MiscCommand {
     Cookie
 }
 
+impl std::fmt::Display for MiscCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MiscCommand::Slap => write!(f, "slap"),
+            MiscCommand::Tea => write!(f, "tea"),
+            MiscCommand::Cake => write!(f, "cake"),
+            MiscCommand::Cookie => write!(f, "cookie")
+        }
+    }
+}
+
 // Grab random GIF attachment.
 async fn grab_misc_gif(
     database: &sqlx::MySqlPool,
@@ -37,23 +48,7 @@ pub async fn slap(
     ctx: Context<'_>,
     #[description = "The user you'd like to slap."] victim: serenity::User
 ) -> Result<(), Error> {
-    ctx.defer().await?;
     misc_container(ctx, MiscCommand::Slap, victim).await?;
-
-    // // Stat handling
-    // let guild_id = ctx.guild_id().unwrap().get();
-    // let executioner_id = ctx.author().id.get();
-    // user_table_check(ctx, &victim).await;  // - Check victim's existence
-
-    // if ctx.author() != &victim {
-    //     let query = format!("UPDATE users SET slap_sent = slap_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
-    //         UPDATE users SET slap_received = slap_received + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}");
-
-    //     sqlx::raw_sql(&query)
-    //         .execute(&ctx.data().database)
-    //         .await
-    //         .unwrap();
-    // }
 
     Ok(())
 }
@@ -70,22 +65,6 @@ pub async fn cookie(
 ) -> Result<(), Error> {
     misc_container(ctx, MiscCommand::Cookie, victim).await?;
 
-    // // Stat handling
-    // let guild_id = ctx.guild_id().unwrap().get();
-    // let executioner_id = ctx.author().id.get();
-    // let victim_id = victim.id.get();
-    // user_table_check(ctx, &victim).await;  // - Check victim's existence
-
-    // if ctx.author() != &victim {
-    //     let query = format!("UPDATE users SET cookie_sent = cookie_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
-    //         UPDATE users SET cookie_received = cookie_received + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}");
-
-    //     sqlx::raw_sql(&query)
-    //         .execute(&ctx.data().database)
-    //         .await
-    //         .unwrap();
-    // }
-
     Ok(())
 }
 
@@ -101,22 +80,6 @@ pub async fn tea(
 ) -> Result<(), Error> {
     misc_container(ctx, MiscCommand::Tea, victim).await?;
 
-    // // Stat handling
-    // let guild_id = ctx.guild_id().unwrap().get();
-    // let executioner_id = ctx.author().id.get();
-    // let victim_id = victim.id.get();
-    // user_table_check(ctx, &victim).await;  // - Check victim's existence
-
-    // if ctx.author() != &victim {
-    //     let query = format!("UPDATE users SET tea_sent = tea_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
-    //         UPDATE users SET tea_received = tea_received + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}");
-
-    //     sqlx::raw_sql(&query)
-    //         .execute(&ctx.data().database)
-    //         .await
-    //         .unwrap();
-    // }
-
     Ok(())
 }
 
@@ -131,29 +94,6 @@ pub async fn cake(
     #[description = "The user you'd like to cake."] victim: serenity::User
 ) -> Result<(), Error> {
     misc_container(ctx, MiscCommand::Cake, victim).await?;
-
-    // // Stat handling
-    // let guild_id = ctx.guild_id().unwrap().get();
-    // let executioner_id = ctx.author().id.get();
-    // let victim_id = victim.id.get();
-    // user_table_check(ctx, &victim).await;  // - Check victim's existence
-
-    // // Update stats
-    // if ctx.author() != &victim {
-    //     let victim_increment = if glados == 9 {
-    //         "cake_glados = cake_glados + 1"
-    //     } else {
-    //         "cake_received = cake_received + 1"
-    //     };
-
-    //     let query = format!("UPDATE users SET cake_sent = cake_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
-    //         UPDATE users SET {victim_increment} WHERE guild_id = {guild_id} AND user_id = {victim_id}");
-
-    //     sqlx::raw_sql(&query)
-    //         .execute(&ctx.data().database)
-    //         .await
-    //         .unwrap();
-    // }
 
     Ok(())
 }
@@ -188,6 +128,7 @@ async fn misc_container(
     let mut random_gif = grab_misc_gif(&ctx.data().database, guild_id, &gif_type).await;
     
     // Determine embed message
+    let mut glados_trigger= false;
     let msg = match gif_type {
         GIFType::Tea => {
             if ctx.author() == &victim {
@@ -204,6 +145,7 @@ async fn misc_container(
             
             if glados == 9 {
                 random_gif = Some(String::from("https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif"));
+                glados_trigger = true;
                 String::from("***The cake is a lie***")
             } else {
                 format!("{} has given you some cake! Hope you like it!", ctx.author())
@@ -227,6 +169,26 @@ async fn misc_container(
     reply = reply.embed(embed);
     
     ctx.send(reply).await?;
+    
+    // Handle stats
+    if ctx.author() != &victim {
+        let executioner_id = ctx.author().id.get();
+        let victim_id = victim.id.get();
+        user_table_check(ctx, &victim).await;
+        
+        let query = if glados_trigger {
+            format!("UPDATE users SET cake_sent = cake_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
+                UPDATE users SET cake_glados = cake_glados + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}")
+        } else {
+            format!("UPDATE users SET {command}_sent = {command}_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
+                UPDATE users SET {command}_received = {command}_received + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}")
+        };
+        
+        sqlx::raw_sql(&query)
+            .execute(&ctx.data().database)
+            .await
+            .unwrap();
+    }
     
     Ok(())
 }
