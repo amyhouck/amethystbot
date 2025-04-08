@@ -47,17 +47,10 @@ pub async fn user_table_check(ctx: Context<'_>, user: &serenity::User) {
             .await
             .unwrap();
 
-    let display_name = determine_display_username(ctx.http(), user, ctx.guild_id().unwrap()).await;
-
     // If user doesn't exist, add them. Returns after adding
     if db_user.count == 0 {
+        let display_name = determine_display_username(ctx.http(), user, ctx.guild_id().unwrap()).await;
         user_table_add(&ctx.data().database, guild_id.get(), user.id.get(), display_name).await;
-        return;
-    }
-
-    // If the display names don't match, update database
-    if db_user.display_name.unwrap() != display_name {
-        alter_db_display_name(&ctx.data().database, guild_id.get(), user.id.get(), display_name).await;
     }
 }
 
