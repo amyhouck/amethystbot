@@ -47,28 +47,21 @@ pub enum GIFDBQueryType {
 // Functions
 //--------------------
 // Convert GIF vector into String vector
-fn create_gif_pages(gifs: Vec<CustomGif>) -> Vec<String> {
-    let mut page_content = String::new();
-    let mut pages: Vec<String> = Vec::new();
-
-    for (i, gif) in gifs.iter().enumerate() {
-        page_content = format!("{page_content}**{}.** {}\n\n",
-            i + 1,
-            gif.gif_url
-        );
-
-        // Split content into more pages as necessary
-        if i + 1 == gifs.len() {
-            pages.push(page_content);
-            break;
-        }
-
-        if (i + 1) % 5 == 0 {
-            pages.push(page_content);
-            page_content = String::new();
-        }
+fn create_gif_pages(gifs: Vec<CustomGif>) -> Vec<serenity::CreateEmbed> {
+    let mut pages: Vec<serenity::CreateEmbed> = Vec::new();
+    
+    for (i, custom_gif) in gifs.iter().enumerate() {
+        let description = format!("**Name:** {}\n**URL:** {}", custom_gif.gif_name, &custom_gif.gif_url);
+        
+        let embed = serenity::CreateEmbed::new()
+            .title(format!("{} GIFs {}/{}", custom_gif.gif_type, i + 1, gifs.len()))
+            .description(description)
+            .image(&custom_gif.gif_url)
+            .colour(0x0b4a6f);
+            
+        pages.push(embed);
     }
-
+    
     pages
 }
 
@@ -218,84 +211,74 @@ pub async fn delgif(
     Ok(())
 }
 
-/// List the custom GIFs set for a command
+/// List the custom GIFs set for this server
 #[poise::command(
     slash_command,
     guild_only,
-    member_cooldown = 5,
+    member_cooldown = 5
 )]
 pub async fn listgifs(
     ctx: Context<'_>,
-
-    #[description = "The command with custom GIFs"]
+    
+    #[description = "The type of GIF to list"]
     gif_type: GIFType
 ) -> Result<(), Error> {
-    let guild_id = ctx.guild_id().unwrap().get();
-    let gif_type_string = gif_type.to_string();
-
-    // Grab relevant GIFs, return error if empty vector
-    let gifs = grab_custom_gifs(&ctx.data().database, &gif_type, guild_id, GIFDBQueryType::Normal).await;
-
+    // Grab relevant GIFs, return error if empty
+    let gifs = grab_custom_gifs(&ctx.data().database, &gif_type, ctx.guild_id().unwrap().get(), GIFDBQueryType::Normal).await;
+    
     if gifs.is_empty() {
-        return Err(format!("No GIFs were found under \"{gif_type_string}\"").into());
+        return Err(format!("No GIFs were found for \"{gif_type}\"").into());
     }
-
-    // Create GIF embed
+    
+    // Run interaction for the gif pages
     let gif_pages = create_gif_pages(gifs);
-    let mut page_num = 0;
-
-    let embed = serenity::CreateEmbed::new()
-        .description(&gif_pages[page_num])
-        .colour(0x0b4a6f)
-        .title(format!("Custom GIFs for \"{gif_type_string}\""));
-
-    let mut reply_obj = poise::CreateReply::default()
-        .embed(embed);
-
+    let mut reply = poise::CreateReply::default()
+        .embed(gif_pages[0].clone());
+        
     if gif_pages.len() > 1 {
         let ctx_id = ctx.id();
-        let prev_id = format!("{ctx_id}prev");
         let next_id = format!("{ctx_id}next");
-
+        let prev_id = format!("{ctx_id}prev");
+        let mut page_num: usize = 0;
+        
         let buttons: Vec<serenity::CreateButton> = vec![
             serenity::CreateButton::new(&prev_id).label("Previous"),
-            serenity::CreateButton::new(&next_id).label("Next")
+            serenity::CreateButton::new(&next_id).label("Next")  
         ];
+        
         let buttons = serenity::CreateActionRow::Buttons(buttons);
-
-        reply_obj = reply_obj.components(vec![buttons]);
-        ctx.send(reply_obj).await?;
-
-        // Handle button interactions
+        reply = reply.components(vec![buttons]);
+        
+        ctx.send(reply).await?;
+        
         while let Some(press) = serenity::collector::ComponentInteractionCollector::new(ctx)
             .filter(move |press| press.data.custom_id.starts_with(&ctx_id.to_string()))
-            .timeout(std::time::Duration::from_secs(1800))
+            .timeout(std::time::Duration::from_secs(600))
             .await {
                 if press.data.custom_id == prev_id {
-                    page_num = page_num.checked_sub(1).unwrap_or(gif_pages.len() - 1)
+                    page_num = page_num.checked_sub(1).unwrap_or(gif_pages.len() - 1);
                 } else if press.data.custom_id == next_id {
-                    page_num += 1;
-                    if page_num >= gif_pages.len() { page_num = 0; }
+                    page_num = if page_num == gif_pages.len() - 1 {
+                        0  
+                    } else {
+                        page_num + 1
+                    };
                 } else {
                     continue;
                 }
-
+                
                 press.create_response(
                     ctx.serenity_context(),
                     serenity::CreateInteractionResponse::UpdateMessage(
                         serenity::CreateInteractionResponseMessage::new()
-                            .embed(serenity::CreateEmbed::new()
-                                .description(&gif_pages[page_num])
-                                .colour(0x0b4a6f)
-                                .title(format!("Custom GIFs for \"{gif_type_string}\""))
-                            )
+                            .embed(gif_pages[page_num].clone())
                     )
                 ).await?;
         }
     } else {
-        ctx.send(reply_obj).await?;
+        ctx.send(reply).await?;
     }
-
+    
     Ok(())
 }
 
