@@ -38,6 +38,21 @@ async fn grab_misc_gif(
     }
 }
 
+// Determine if user is accepting pings
+async fn is_user_pingable(
+    database: &sqlx::MySqlPool,
+    guild_id: u64,
+    user_id: u64
+) -> bool {
+    let ping = sqlx::query!("SELECT command_ping FROM user_settings WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+        .fetch_one(database)
+        .await
+        .unwrap()
+        .command_ping;
+        
+    if ping == 1 { true } else { false }
+}
+
 /// Slap slap slap, clap clap clap
 #[poise::command(
     slash_command,
@@ -129,7 +144,7 @@ async fn misc_container(
     
     // Determine embed message
     let mut glados_trigger= false;
-    let msg = match gif_type {
+    let mut msg = match gif_type {
         GIFType::Tea => {
             if ctx.author() == &victim {
                 String::from("You have received some tea!")
@@ -157,15 +172,21 @@ async fn misc_container(
     };
     
     // Build and send embed
-    let mut embed = serenity::CreateEmbed::new()
-        .description(msg);
+    let mut embed = serenity::CreateEmbed::new();
+    let mut reply = poise::CreateReply::default();
+    
+    // - Ping user if allowed
+    if is_user_pingable(&ctx.data().database, guild_id, victim.id.get()).await {
+        reply = reply.content(format!("{victim}"));
+    } else {
+        msg = format!("{victim}: {msg}");
+    }
         
-    let mut reply = poise::CreateReply::default()
-        .content(format!("{victim}"));
-        
+    // - Add GIF if it exists
     if let Some(url) = random_gif {
         embed = embed.image(url);
     }
+    embed = embed.description(msg);
     reply = reply.embed(embed);
     
     ctx.send(reply).await?;
