@@ -4,6 +4,7 @@ use crate::customgifs::{grab_custom_gifs, GIFType, GIFDBQueryType};
 use poise::serenity_prelude as serenity;
 use rand::{Rng, thread_rng};
 
+#[derive(Clone, Copy)]
 enum MiscCommand {
     Slap,
     Tea,
@@ -18,6 +19,29 @@ impl std::fmt::Display for MiscCommand {
             MiscCommand::Tea => write!(f, "tea"),
             MiscCommand::Cake => write!(f, "cake"),
             MiscCommand::Cookie => write!(f, "cookie")
+        }
+    }
+}
+
+impl MiscCommand {
+    fn determine_gif_type(self, target_self: bool) -> GIFType {
+        match self {
+            MiscCommand::Slap => {
+                if target_self {
+                    GIFType::SlapSelf
+                } else {
+                    GIFType::Slap
+                }
+            },
+            MiscCommand::Cookie => {
+                if target_self {
+                    GIFType::CookieSelf
+                } else {
+                    GIFType::Cookie
+                }
+            },
+            MiscCommand::Tea => GIFType::Tea,
+            MiscCommand::Cake => GIFType::Cake
         }
     }
 }
@@ -51,6 +75,30 @@ async fn is_user_pingable(
         .command_ping;
         
     ping == 1
+}
+
+async fn handle_user_stats(
+    command: &MiscCommand,
+    ctx: Context<'_>,
+    victim: serenity::User,
+    glados_trigger: bool
+) {
+    let guild_id = ctx.guild_id().unwrap().get();
+    let executioner_id = ctx.author().id.get();
+    let victim_id = victim.id.get();
+        
+    let query = if glados_trigger {
+        format!("UPDATE users SET cake_sent = cake_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
+            UPDATE users SET cake_glados = cake_glados + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}")
+    } else {
+        format!("UPDATE users SET {command}_sent = {command}_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
+            UPDATE users SET {command}_received = {command}_received + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}")
+    };
+        
+    sqlx::raw_sql(&query)
+        .execute(&ctx.data().database)
+        .await
+        .unwrap();
 }
 
 /// Slap slap slap, clap clap clap
@@ -121,24 +169,7 @@ async fn misc_container(
     let guild_id = ctx.guild_id().unwrap().get();
     
     // Determine GIF
-    let gif_type = match command {
-        MiscCommand::Slap => {
-            if ctx.author() == &victim {
-                GIFType::SlapSelf
-            } else {
-                GIFType::Slap
-            }
-        },
-        MiscCommand::Cookie => {
-            if ctx.author() == &victim {
-                GIFType::CookieSelf
-            } else {
-                GIFType::Cookie
-            }
-        },
-        MiscCommand::Tea => GIFType::Tea,
-        MiscCommand::Cake => GIFType::Cake
-    };
+    let gif_type = command.determine_gif_type(ctx.author() == &victim);
     
     let mut random_gif = grab_misc_gif(&ctx.data().database, guild_id, &gif_type).await;
     
@@ -193,22 +224,8 @@ async fn misc_container(
     
     // Handle stats
     if ctx.author() != &victim {
-        let executioner_id = ctx.author().id.get();
-        let victim_id = victim.id.get();
         user_table_check(ctx, &victim).await;
-        
-        let query = if glados_trigger {
-            format!("UPDATE users SET cake_sent = cake_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
-                UPDATE users SET cake_glados = cake_glados + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}")
-        } else {
-            format!("UPDATE users SET {command}_sent = {command}_sent + 1 WHERE guild_id = {guild_id} AND user_id = {executioner_id};
-                UPDATE users SET {command}_received = {command}_received + 1 WHERE guild_id = {guild_id} AND user_id = {victim_id}")
-        };
-        
-        sqlx::raw_sql(&query)
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
+        handle_user_stats(&command, ctx, victim, glados_trigger).await;
     }
     
     Ok(())
