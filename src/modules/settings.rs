@@ -39,8 +39,8 @@ pub async fn command_ping(
     let guild_id = ctx.guild_id().unwrap().get();
     let user_id = ctx.author().id.get();
     let bool_choice: bool = match &choice {
-        &EnableDisable::Enable => true,
-        &EnableDisable::Disable => false  
+        EnableDisable::Enable => true,
+        EnableDisable::Disable => false  
     };
     
     sqlx::query!("UPDATE user_settings SET command_ping = ? WHERE guild_id = ? AND user_id = ?", bool_choice, guild_id, user_id)

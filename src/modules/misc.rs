@@ -50,7 +50,7 @@ async fn is_user_pingable(
         .unwrap()
         .command_ping;
         
-    if ping == 1 { true } else { false }
+    ping == 1
 }
 
 /// Slap slap slap, clap clap clap
@@ -153,7 +153,7 @@ async fn misc_container(
             }
         },
         GIFType::Slap => format!("{} slaps you around a bit with a large trout!", ctx.author()),
-        GIFType::SlapSelf => format!("Stop hitting yourself! Stop hitting yourself!"),
+        GIFType::SlapSelf => String::from("Stop hitting yourself! Stop hitting yourself!"),
         GIFType::Cake => {
             let mut rng = thread_rng();
             let glados = rng.gen_range(1..=13);
