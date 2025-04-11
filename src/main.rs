@@ -139,7 +139,8 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             // Remove user from birthday, users
             let query = format!("
                 DELETE FROM birthday WHERE guild_id = {guild_id} AND user_id = {user_id};
-                DELETE FROM users WHERE guild_id = {guild_id} AND user_id = {user_id}
+                DELETE FROM users WHERE guild_id = {guild_id} AND user_id = {user_id};
+                DELETE FROM user_settings WHERE guild_id = {guild_id} AND user_id = {user_id}
             ");
 
             sqlx::raw_sql(&query)

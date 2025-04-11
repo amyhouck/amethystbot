@@ -58,11 +58,20 @@ pub async fn user_table_check(ctx: Context<'_>, user: &serenity::User) {
 // Add user to database
 //--------------------------
 pub async fn user_table_add(database: &sqlx::MySqlPool, guild_id: u64, user_id: u64, display_name: String) {
-    let query_attempt = sqlx::query!("INSERT INTO users (guild_id, user_id, display_name) VALUES (?, ?, ?)", guild_id, user_id, display_name)
+    let users_table_query_attempt = sqlx::query!("INSERT INTO users (guild_id, user_id, display_name) VALUES (?, ?, ?)", guild_id, user_id, display_name)
         .execute(database)
         .await;
 
-    match query_attempt {
+    match users_table_query_attempt {
+        Ok(_) => log::write_log(log::LogType::UserDBRegister { guild_id, user_id }),
+        Err(e) => log::write_log(log::LogType::DBError { db_error: e.to_string() })
+    }
+    
+    let user_settings_query = sqlx::query!("INSERT INTO user_settings (guild_id, user_id) VALUES (?, ?)", guild_id, user_id)
+        .execute(database)
+        .await;
+        
+    match user_settings_query {
         Ok(_) => log::write_log(log::LogType::UserDBRegister { guild_id, user_id }),
         Err(e) => log::write_log(log::LogType::DBError { db_error: e.to_string() })
     }
