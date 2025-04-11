@@ -1,4 +1,4 @@
-use crate::{data::determine_display_username, Context, Error};
+use crate::{Context, Error};
 use poise::serenity_prelude as serenity;
 
 // Choices
@@ -127,15 +127,15 @@ pub async fn rps(
     ];
 
     // Handle message
-    let author_name = determine_display_username(ctx.http(), ctx.author(), ctx.guild_id().unwrap()).await;
-    let victim_name = determine_display_username(ctx.http(), &victim, ctx.guild_id().unwrap()).await;
+    let author_name = ctx.author().display_name();
+    let victim_name = victim.display_name();
     let embed_desc = format!("{}, you have been challenged to Rock, Paper, Scissors!\n\n Players, select a choice below! You have 1 minute!", victim);
 
     let rps_embed = serenity::CreateEmbed::new()
         .title("Rock, Paper, Scissors")
         .description(&embed_desc)
-        .field(&author_name, rps_game[0].choice.to_string(), true)
-        .field(&victim_name, rps_game[1].choice.to_string(), true)
+        .field(author_name, rps_game[0].choice.to_string(), true)
+        .field(victim_name, rps_game[1].choice.to_string(), true)
         .colour(0xFFFFFF);
 
     // Setup interaction data
@@ -215,8 +215,8 @@ pub async fn rps(
                 .embed(serenity::CreateEmbed::new()
                     .title("Rock, Paper, Scissors")
                     .description(embed_desc)
-                    .field(&author_name, rps_game[0].choice.to_string(), true)
-                    .field(&victim_name, rps_game[1].choice.to_string(), true)
+                    .field(author_name, rps_game[0].choice.to_string(), true)
+                    .field(victim_name, rps_game[1].choice.to_string(), true)
                     .colour(0xFFFFFF)
                 )
                 .components(Vec::new())
@@ -240,8 +240,8 @@ pub async fn rps(
                 .embed(serenity::CreateEmbed::new()
                     .title("Rock, Paper, Scissors")
                     .description(&embed_desc)
-                    .field(&author_name, first_text, true)
-                    .field(&victim_name, second_text, true)
+                    .field(author_name, first_text, true)
+                    .field(victim_name, second_text, true)
                     .colour(0xFFFFFF)
                 )
             ).await?;

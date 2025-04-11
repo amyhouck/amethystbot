@@ -49,8 +49,7 @@ pub async fn user_table_check(ctx: Context<'_>, user: &serenity::User) {
 
     // If user doesn't exist, add them. Returns after adding
     if db_user.count == 0 {
-        let display_name = determine_display_username(ctx.http(), user, ctx.guild_id().unwrap()).await;
-        user_table_add(&ctx.data().database, guild_id.get(), user.id.get(), display_name).await;
+        user_table_add(&ctx.data().database, guild_id.get(), user.id.get(), user.display_name().to_string()).await;
     }
 }
 
@@ -75,24 +74,6 @@ pub async fn user_table_add(database: &sqlx::MySqlPool, guild_id: u64, user_id: 
         Ok(_) => log::write_log(log::LogType::UserDBRegister { guild_id, user_id }),
         Err(e) => log::write_log(log::LogType::DBError { db_error: e.to_string() })
     }
-}
-
-//--------------------------
-// Determine username to display
-//--------------------------
-pub async fn determine_display_username(
-    http: &serenity::Http,
-    user: &serenity::User,
-    guild_id: serenity::GuildId
-) -> String {
-    let nick = user.nick_in(http, guild_id).await;
-
-    nick.unwrap_or_else(||
-        match &user.global_name {
-            Some(n) => n.to_string(),
-            None => user.name.to_string()
-        }
-    )
 }
 
 //--------------------------

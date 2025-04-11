@@ -2,7 +2,7 @@ mod data;
 mod modules;
 mod events;
 
-use data::{alter_db_display_name, determine_display_username, user_table_add, user_table_check, Data};
+use data::{alter_db_display_name, user_table_add, user_table_check, Data};
 use poise::serenity_prelude as serenity;
 use dotenv::dotenv;
 use chrono::Utc;
@@ -171,8 +171,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                 None => return Ok(())
             };
 
-            let display_name = determine_display_username(&ctx.http, &new.user, new.guild_id).await;
-            alter_db_display_name(&data.database, new.guild_id.get(), new.user.id.get(), display_name).await;
+            alter_db_display_name(&data.database, new.guild_id.get(), new.user.id.get(), new.display_name().to_string()).await;
         },
 
         serenity::FullEvent::Message { new_message } => {
@@ -193,10 +192,9 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                 .await
                 .unwrap();
 
-            let display_name = determine_display_username(&ctx.http, &new.member.as_ref().unwrap().user, guild_id).await;
-
             // If user doesn't exist, add them. Returns after adding
             if db_user.count == 0 {
+                let display_name = new.member.as_ref().unwrap().display_name().to_string();
                 user_table_add(&data.database, guild_id.get(), user_id.get(), display_name).await;
             }
 

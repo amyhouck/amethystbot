@@ -1,4 +1,4 @@
-use crate::{data::{determine_display_username, user_table_check}, Context, Error};
+use crate::{data::user_table_check, Context, Error};
 use futures::future;
 use poise::serenity_prelude as serenity;
 
@@ -26,7 +26,6 @@ async fn build_single_quote_embed(http: &serenity::Http, quote: Quote) -> sereni
 
     // Build embed
     let title = format!("Quote #{} by {}", quote.quote_id, quote.sayer_display_name);
-
     let footer = serenity::CreateEmbedFooter::new(format!("Added by {} on {}", quote.adder_display_name, quote.timestamp));
 
     serenity::CreateEmbed::new()
@@ -110,7 +109,7 @@ fn split_quotes_into_pages(guild_quotes: Vec<Quote>) -> Vec<String> {
 )]
 pub async fn addquote(
     ctx: Context<'_>,
-    #[description = "The person who said the quote."] sayer: serenity::User,
+    #[description = "The person who said the quote."] sayer: serenity::Member,
     #[max_length = 500]
     #[description = "The quote to record."] quote: String,
     #[description = "Optionally add a date for the quote."] date: Option<String>
@@ -130,11 +129,11 @@ pub async fn addquote(
     let mut quote_data = Quote {
         guild_id: ctx.guild_id().unwrap().get(),
         adder_id: ctx.author().id.get(),
-        sayer_id: sayer.id.get(),
+        sayer_id: sayer.user.id.get(),
         quote,
         timestamp,
-        sayer_display_name: determine_display_username(ctx.http(), &sayer, ctx.guild_id().unwrap()).await,
-        adder_display_name: determine_display_username(ctx.http(), ctx.author(), ctx.guild_id().unwrap()).await,
+        sayer_display_name: String::from(sayer.display_name()),
+        adder_display_name: String::from(ctx.author().display_name()),
         ..Default::default()
     };
 
@@ -158,7 +157,7 @@ pub async fn addquote(
         )
         .execute(&ctx.data().database);
 
-    let sayer_check = user_table_check(ctx, &sayer);
+    let sayer_check = user_table_check(ctx, &sayer.user);
 
     let _ = future::join(insert_query, sayer_check).await;
 
