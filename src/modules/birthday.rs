@@ -59,7 +59,7 @@ async fn determine_username (
 
         match user_display_name {
             Some(record) => return record.display_name,
-            None => return serenity::UserId::new(user_id).to_user(&ctx).await.unwrap().name
+            None => return serenity::UserId::new(user_id).to_user(&ctx).await.unwrap().display_name().to_string()
         }
     }
 
