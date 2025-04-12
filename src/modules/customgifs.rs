@@ -12,7 +12,10 @@ pub enum GIFType {
     CookieSelf,
     Slap,
     SlapSelf,
-    Tea
+    Tea,
+    BombTime,
+    BombFailure,
+    BombDefuse,
 }
 
 impl std::fmt::Display for GIFType {
@@ -24,7 +27,10 @@ impl std::fmt::Display for GIFType {
             GIFType::CookieSelf => write!(f, "cookie_self"),
             GIFType::Slap => write!(f, "slap"),
             GIFType::SlapSelf => write!(f, "slap_self"),
-            GIFType::Tea => write!(f, "tea")
+            GIFType::Tea => write!(f, "tea"),
+            GIFType::BombTime => write!(f, "bomb_time"),
+            GIFType::BombFailure => write!(f, "bomb_failure"),
+            GIFType::BombDefuse => write!(f, "bomb_defuse")
         }
     }
 }
