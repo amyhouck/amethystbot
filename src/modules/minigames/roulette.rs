@@ -45,16 +45,13 @@ pub async fn roulette(ctx: Context<'_>) -> Result<(), Error> {
             
         ctx.send(poise::CreateReply::default().embed(embed)).await?;
         
-        sqlx::query!("UPDATE guild_settings SET roulette_chamber = 0, roulette_count = 0 WHERE guild_id = ?", guild_id)
-            .execute(&ctx.data().database)
-            .await
-            .unwrap();
-            
         let user_id = ctx.author().id.get();
-        sqlx::query!("UPDATE users SET roulette_deaths = roulette_deaths + 1 WHERE guild_id = ? AND user_id = ?", guild_id, user_id)
+        let roulette_win_query = format!("UPDATE guild_settings SET roulette_chamber = 0, roulette_count = 0 WHERE guild_id = {guild_id}
+            UPDATE users SET roulette_deaths = roulette_deaths + 1 WHERE guild_id = {guild_id} AND user_id = {user_id}");
+        
+        sqlx::raw_sql(&roulette_win_query)
             .execute(&ctx.data().database)
-            .await
-            .unwrap();
+            .await?;
     } else {
         let gif_url = "https://c.tenor.com/Zv53CH35UVAAAAAd/tenor.gif";
         let msg = format!("{}, you hear a click and nothing happens! You have survived the attempt.", ctx.author());
