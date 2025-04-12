@@ -156,18 +156,16 @@ pub async fn addquote(
             quote_data.sayer_display_name
         )
         .execute(&ctx.data().database);
-
     let sayer_check = user_table_check(ctx, &sayer.user);
-
-    let _ = future::join(insert_query, sayer_check).await;
+    let quote_embed = build_single_quote_embed(ctx.http(), quote_data);
+    
+    let futures = future::join3(insert_query, sayer_check, quote_embed).await;
 
     // Build embed then post success
-    let quote_embed = build_single_quote_embed(ctx.http(), quote_data).await;
-
     ctx.send(
         poise::CreateReply::default()
             .content("Quote successfully added!")
-            .embed(quote_embed)
+            .embed(futures.2)
     ).await?;
 
     Ok(())
@@ -239,10 +237,13 @@ pub async fn delquote(
     };
 
     // Delete quote
-    let delete_query = sqlx::query!("DELETE FROM quotes WHERE guild_id = ? AND quote_id = ?", guild_id, id)
+    let delete_query_str = format!("DELETE FROM quotes WHERE guild_id = {guild_id} AND quote_id = {id};
+        UPDATE quotes SET quote_id = quote_id - 1 WHERE guild_id = {guild_id} AND quote_id = {id}");
+        
+    let delete_query = sqlx::raw_sql(&delete_query_str)
         .execute(&ctx.data().database)
         .await;
-
+        
     let _ = match delete_query {
         Ok(_) => ctx.say("Successfully deleted the quote!").await.unwrap(),
         Err(e) => {
@@ -250,12 +251,6 @@ pub async fn delquote(
             ctx.say("There was an error trying to delete the quote!").await.unwrap()
         }
     };
-
-    // Adjust quote IDs
-    sqlx::query!("UPDATE quotes SET quote_id = quote_id - 1 WHERE guild_id = ? AND quote_id > ?", guild_id, id)
-        .execute(&ctx.data().database)
-        .await
-        .unwrap();
 
     Ok(())
 }
