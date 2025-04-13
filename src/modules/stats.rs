@@ -231,7 +231,9 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
 
     // Server stats struct construction
     let mut server_stats = data::ServerStats::default();
-    let mut raw_vc_time = 0u32;
+    let mut raw_vc_time: u32 = 0;
+    let mut rps_ties: u32 = 0;
+    let mut rps_wins: u32 = 0;
     for record in server_data {
         server_stats.bomb_defused += record.bomb_defused;
         server_stats.bomb_failed += record.bomb_failed;
@@ -241,8 +243,13 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
         server_stats.tea_sent += record.tea_sent;
         server_stats.slap_sent += record.slap_sent;
         server_stats.glados_appearances += record.cake_glados;
+        server_stats.roulette_rounds += record.roulette_deaths;
         raw_vc_time += record.vctrack_total_time;
+        rps_ties += record.rps_tie;
+        rps_wins += record.rps_win;
     }
+    
+    server_stats.rps_rounds = rps_wins + (rps_ties / 2);
 
     let formatted_vc_time = format!("{}d {}h {}m {}s",
         ((raw_vc_time / 60) / 60) / 24,
@@ -252,7 +259,21 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
     );
 
     // Build and send stats embed
-    let embed_desc = format!("**Total VC time:** {formatted_vc_time}\n\n**Cookies sent:** {0}\n**Cakes sent:** {1}\n**Tea sent:** {2}\n**Slaps sent:** {3}\n**GLaDOS appearances:** {7}\n**Total quotes:** {quote_count}\n\n**Bombs sent:** {4}\n**Bombs defused:** {5}\n**Bombs exploded:** {6}",
+    let embed_desc = format!("**Total VC time:** {formatted_vc_time}
+        
+**Cookies sent:** {0}
+**Cakes sent:** {1}
+**Tea sent:** {2}
+**Slaps sent:** {3}
+**GLaDOS appearances:** {7}
+**Total quotes:** {quote_count}
+    
+**Bombs sent:** {4}
+**Bombs defused:** {5}
+**Bombs exploded:** {6}
+    
+**Roulette rounds:** {8}
+**Rock, Paper, Scissors games:** {9}",
         server_stats.cookie_sent,
         server_stats.cake_sent,
         server_stats.tea_sent,
@@ -261,6 +282,8 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
         server_stats.bomb_defused,
         server_stats.bomb_failed,
         server_stats.glados_appearances,
+        server_stats.roulette_rounds,
+        server_stats.rps_rounds
     );
 
     let mut embed = serenity::CreateEmbed::new()

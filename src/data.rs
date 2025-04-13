@@ -138,4 +138,6 @@ pub struct ServerStats {
     pub bomb_defused: u32,
     pub bomb_failed: u32,
     pub glados_appearances: u32,
+    pub roulette_rounds: u32,
+    pub rps_rounds: u32
 }
