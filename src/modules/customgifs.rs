@@ -128,6 +128,22 @@ async fn check_gif_role(ctx: Context<'_>) -> Result<bool, Error> {
     Ok(true)
 }
 
+// Grab random GIF attachment.
+pub async fn grab_misc_gif(
+    database: &sqlx::MySqlPool,
+    guild_id: u64,
+    gif_type: &GIFType
+) -> Option<String> {
+    let random_gif = grab_custom_gifs(database, gif_type, guild_id, GIFDBQueryType::SingleRandom).await;
+    
+    if !random_gif.is_empty() {
+        let url = random_gif[0].gif_url.to_owned();
+        Some(url)
+    } else {
+        None
+    }
+}
+
 //--------------------
 // Commands
 //--------------------

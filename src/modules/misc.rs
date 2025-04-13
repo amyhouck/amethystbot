@@ -1,6 +1,6 @@
 use crate::{Context, Error};
 use crate::data::user_table_check;
-use crate::customgifs::{grab_custom_gifs, GIFType, GIFDBQueryType};
+use crate::customgifs::{grab_misc_gif, GIFType};
 use poise::serenity_prelude as serenity;
 use rand::{Rng, thread_rng};
 
@@ -43,22 +43,6 @@ impl MiscCommand {
             MiscCommand::Tea => GIFType::Tea,
             MiscCommand::Cake => GIFType::Cake
         }
-    }
-}
-
-// Grab random GIF attachment.
-async fn grab_misc_gif(
-    database: &sqlx::MySqlPool,
-    guild_id: u64,
-    gif_type: &GIFType
-) -> Option<String> {
-    let random_gif = grab_custom_gifs(database, gif_type, guild_id, GIFDBQueryType::SingleRandom).await;
-    
-    if !random_gif.is_empty() {
-        let url = random_gif[0].gif_url.to_owned();
-        Some(url)
-    } else {
-        None
     }
 }
 

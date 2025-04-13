@@ -1,4 +1,4 @@
-use crate::{customgifs::{grab_custom_gifs, GIFDBQueryType, GIFType}, user_table_check, Context, Error};
+use crate::{customgifs::{grab_misc_gif, GIFType}, user_table_check, Context, Error};
 use poise::serenity_prelude as serenity;
 use rand::{Rng, thread_rng};
 use chrono::Utc;
@@ -121,12 +121,12 @@ pub async fn bomb(
         if press.data.custom_id == bomb.wire_id {
             // Handle interaction
             let mut msg = press.message.clone();
-            let gif = grab_custom_gifs(&ctx.data().database, &GIFType::BombDefuse, bomb.guild_id, GIFDBQueryType::SingleRandom).await;
+            let gif = grab_misc_gif(&ctx.data().database, bomb.guild_id, &GIFType::BombDefuse).await.unwrap_or(String::new());
             msg.edit(ctx, 
                 serenity::EditMessage::new()
                     .embed(serenity::CreateEmbed::new()
                         .description("You have successfully defused the bomb!")
-                        .image(&gif[0].gif_url)
+                        .image(gif)
                         .color(0x00FF00))
                     .components(Vec::new())
             ).await?;
@@ -148,12 +148,12 @@ pub async fn bomb(
         if press.data.custom_id != bomb.wire_id  {
             // Handle interaction
             let mut msg = press.message.clone();
-            let gif = grab_custom_gifs(&ctx.data().database, &GIFType::BombFailure, bomb.guild_id, GIFDBQueryType::SingleRandom).await;
+            let gif = grab_misc_gif(&ctx.data().database, bomb.guild_id, &GIFType::BombFailure).await.unwrap_or(String::new());
             msg.edit(ctx, 
                 serenity::EditMessage::new()
                     .embed(serenity::CreateEmbed::new()
                         .description("Wrong wire!! ***KABOOM***")
-                        .image(&gif[0].gif_url)
+                        .image(gif)
                         .color(0xFF0000))
                     .components(Vec::new())
             ).await?;
@@ -174,11 +174,11 @@ pub async fn bomb(
 
     // Check if bomb is still active after timeout
     if !bomb.exploded {
-        let gif = grab_custom_gifs(&ctx.data().database, &GIFType::BombTime, bomb.guild_id, GIFDBQueryType::SingleRandom).await;
+        let gif = grab_misc_gif(&ctx.data().database, bomb.guild_id, &GIFType::BombTime).await.unwrap_or(String::new());
         msg.edit(ctx, poise::CreateReply::default()
             .embed(serenity::CreateEmbed::new()
                 .description("***KABOOM*** You ran out of time!")
-                .image(&gif[0].gif_url)
+                .image(gif)
                 .color(0xFF0000)
             )
             .components(Vec::new())
