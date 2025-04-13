@@ -13,10 +13,10 @@ fn build_general_embed(
     times_quoted: i64,
 ) -> serenity::CreateEmbed {
     let embed_description = format!("
-        **Time spent in VC:** {vctime}
-        
-        **Quotes added:** {quotes_added}
-        **Times quoted:** {times_quoted}"
+**Time spent in VC:** {vctime}
+            
+**Quotes added:** {quotes_added}
+**Times quoted:** {times_quoted}"
     );
         
     serenity::CreateEmbed::default()
@@ -31,18 +31,18 @@ fn build_misc_embed(
     user_avatar: &String,
 ) -> serenity::CreateEmbed {
     let embed_description = format!("
-        **Cookies sent:** {cookie_sent}
-        **Cookies received:** {cookie_received}
+**Cookies sent:** {cookie_sent}
+**Cookies received:** {cookie_received}
         
-        **Cakes sent:** {cake_sent}
-        **Cakes received:** {cake_received}
-        **Times GLaDOSed:** {cake_glados}
+**Cakes sent:** {cake_sent}
+**Cakes received:** {cake_received}
+**Times GLaDOSed:** {cake_glados}
         
-        **Cups of tea given:** {tea_sent}
-        **Cups of tea received:** {tea_received}
+**Cups of tea given:** {tea_sent}
+**Cups of tea received:** {tea_received}
         
-        **People slapped:** {slap_sent}
-        **Slaps received:** {slap_received}",
+**People slapped:** {slap_sent}
+**Slaps received:** {slap_received}",
         
         cookie_sent = user_data.cookie_sent,
         cookie_received = user_data.cookie_received,
@@ -67,15 +67,15 @@ fn build_minigames_embed(
     user_avatar: &String
 ) -> serenity::CreateEmbed {
     let embed_description = format!("
-        **Bombs sent:** {bomb_sent}
-        **Bombs defused:** {bomb_defused}
-        **Times exploded:** {bomb_failed}
+**Bombs sent:** {bomb_sent}
+**Bombs defused:** {bomb_defused}
+**Times exploded:** {bomb_failed}
         
-        **Won Rock, Paper, Scissors:** {rps_win}
-        **Lost Rock, Paper, Scissors:** {rps_loss}
-        **Tied Rock, Paper, Scissors:** {rps_tie}
+**Won Rock, Paper, Scissors:** {rps_win}
+**Lost Rock, Paper, Scissors:** {rps_loss}
+**Tied Rock, Paper, Scissors:** {rps_tie}
         
-        **Lost Russian Roulette:** {roulette_deaths}",
+**Lost Russian Roulette:** {roulette_deaths}",
         
         bomb_sent = user_data.bomb_sent,
         bomb_defused = user_data.bomb_defused,
