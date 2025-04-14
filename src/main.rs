@@ -178,6 +178,32 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             if new_message.author.id.get() == 375805687529209857u64 && new_message.content.contains("Desiner") {
                 new_message.channel_id.say(&ctx, "Desiner").await?;
             }
+            
+            // Handle boost message event
+            if new_message.kind == serenity::MessageType::PinsAdd {
+                // Grab server's boost settings
+                let boost_settings = sqlx::query!("SELECT * FROM boost WHERE guild_id = ?", new_message.guild_id.unwrap().get())
+                    .fetch_one(&data.database)
+                    .await
+                    .unwrap();
+                    
+                // Do the boost message embed thing
+                if let Some(boost_channel) = boost_settings.channel_id {
+                    let title = format!("{} has boosted the server!", new_message.author.display_name());
+                    
+                    let embed = serenity::CreateEmbed::new()
+                        .colour(0xf47fff)
+                        .description(boost_settings.message.unwrap_or(String::new()))
+                        .image(boost_settings.image_url.unwrap_or(String::new()))
+                        .thumbnail(new_message.author.avatar_url().unwrap_or(String::new()))
+                        .title(title);
+                        
+                    let msg = serenity::CreateMessage::new().embed(embed);
+                    let channel_id = serenity::ChannelId::from(boost_channel);
+                    
+                    channel_id.send_message(&ctx, msg).await?;
+                }
+            }
         },
 
         serenity::FullEvent::VoiceStateUpdate { old, new } => {
@@ -262,6 +288,7 @@ async fn main() {
                 customgifs::listgifs(),
                 customgifs::setgifrole(),
                 settings::settings(),
+                boost::boost(),
 
                 minigames::bomb::bomb(),
                 minigames::rockpaperscisso::rps(),
