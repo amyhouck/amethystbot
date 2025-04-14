@@ -180,7 +180,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             }
             
             // Handle boost message event
-            if new_message.kind == serenity::MessageType::PinsAdd {
+            if new_message.kind == serenity::MessageType::NitroBoost {
                 // Grab server's boost settings
                 let boost_settings = sqlx::query!("SELECT * FROM boost WHERE guild_id = ?", new_message.guild_id.unwrap().get())
                     .fetch_one(&data.database)
