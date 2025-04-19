@@ -9,7 +9,8 @@ enum MiscCommand {
     Slap,
     Tea,
     Cake,
-    Cookie
+    Cookie,
+    Hug
 }
 
 impl std::fmt::Display for MiscCommand {
@@ -18,7 +19,8 @@ impl std::fmt::Display for MiscCommand {
             MiscCommand::Slap => write!(f, "slap"),
             MiscCommand::Tea => write!(f, "tea"),
             MiscCommand::Cake => write!(f, "cake"),
-            MiscCommand::Cookie => write!(f, "cookie")
+            MiscCommand::Cookie => write!(f, "cookie"),
+            MiscCommand::Hug => write!(f, "hug")
         }
     }
 }
@@ -41,7 +43,8 @@ impl MiscCommand {
                 }
             },
             MiscCommand::Tea => GIFType::Tea,
-            MiscCommand::Cake => GIFType::Cake
+            MiscCommand::Cake => GIFType::Cake,
+            MiscCommand::Hug => GIFType::Hug,
         }
     }
 }
@@ -145,6 +148,17 @@ pub async fn cake(
     Ok(())
 }
 
+/// Free hugs!
+#[poise::command(slash_command)]
+pub async fn hug(
+    ctx: Context<'_>,
+    #[description = "The user you're sending a hug to!"] victim: serenity::User
+) -> Result<(), Error> {
+    misc_container(ctx, MiscCommand::Hug, victim).await?;
+    
+    Ok(())
+}
+
 async fn misc_container(
     ctx: Context<'_>,
     command: MiscCommand,
@@ -183,6 +197,13 @@ async fn misc_container(
         },
         GIFType::Cookie => format!("You have received a cookie from {}!", ctx.author()),
         GIFType::CookieSelf => String::from("NO! No cookies for you!"),
+        GIFType::Hug => {
+            if ctx.author() == &victim {
+                String::from("A hug just for you!")
+            } else {
+                format!("{} has given you a hug!", ctx.author())
+            }
+        },
         _ => String::new()
     };
     

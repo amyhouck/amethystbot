@@ -1,0 +1,4 @@
+-- Add migration script here
+ALTER TABLE users
+  ADD COLUMN hug_sent INT UNSIGNED NOT NULL DEFAULT 0,
+  ADD COLUMN hug_received INT UNSIGNED NOT NULL DEFAULT 0

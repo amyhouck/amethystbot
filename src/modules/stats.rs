@@ -42,7 +42,10 @@ fn build_misc_embed(
 **Cups of tea received:** {tea_received}
         
 **People slapped:** {slap_sent}
-**Slaps received:** {slap_received}",
+**Slaps received:** {slap_received}
+
+**People hugged:** {hug_sent}
+**Hugs received:** {hug_received}",
         
         cookie_sent = user_data.cookie_sent,
         cookie_received = user_data.cookie_received,
@@ -52,7 +55,9 @@ fn build_misc_embed(
         slap_sent = user_data.slap_sent,
         slap_received = user_data.slap_received,
         tea_sent = user_data.tea_sent,
-        tea_received = user_data.tea_received
+        tea_received = user_data.tea_received,
+        hug_sent = user_data.hug_sent,
+        hug_received = user_data.hug_received,
     );
     
     serenity::CreateEmbed::default()
@@ -247,6 +252,7 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
         raw_vc_time += record.vctrack_total_time;
         rps_ties += record.rps_tie;
         rps_wins += record.rps_win;
+        server_stats.hug_sent += record.hug_sent;
     }
     
     server_stats.rps_rounds = rps_wins + (rps_ties / 2);
@@ -265,6 +271,7 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
 **Cakes sent:** {1}
 **Tea sent:** {2}
 **Slaps sent:** {3}
+**Hugs sent:** {hug_sent}
 **GLaDOS appearances:** {7}
 **Total quotes:** {quote_count}
     
@@ -283,7 +290,8 @@ pub async fn serverstats(ctx: Context<'_>) -> Result<(), Error> {
         server_stats.bomb_failed,
         server_stats.glados_appearances,
         server_stats.roulette_rounds,
-        server_stats.rps_rounds
+        server_stats.rps_rounds,
+        hug_sent = server_stats.hug_sent
     );
 
     let mut embed = serenity::CreateEmbed::new()

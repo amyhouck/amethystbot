@@ -123,6 +123,8 @@ pub struct User {
     pub rps_loss: u32,
     pub rps_tie: u32,
     pub roulette_deaths: u32,
+    pub hug_sent: u32,
+    pub hug_received: u32,
 }
 
 //--------------------------
@@ -139,5 +141,6 @@ pub struct ServerStats {
     pub bomb_failed: u32,
     pub glados_appearances: u32,
     pub roulette_rounds: u32,
-    pub rps_rounds: u32
+    pub rps_rounds: u32,
+    pub hug_sent: u32,
 }

@@ -271,6 +271,7 @@ async fn main() {
                 misc::cookie(),
                 misc::tea(),
                 misc::cake(),
+                misc::hug(),
                 welcome::welcome(),
                 welcome::setleavechannel(),
                 mtg::mtg(),
