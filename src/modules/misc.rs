@@ -188,7 +188,6 @@ async fn misc_container(
             let glados = rng.gen_range(1..=13);
             
             if glados == 9 {
-                random_gif = Some(String::from("https://media1.tenor.com/m/I1ZYLNNNEGQAAAAC/portal-glados.gif"));
                 glados_trigger = true;
                 String::from("***The cake is a lie***")
             } else {
@@ -206,6 +205,18 @@ async fn misc_container(
         },
         _ => String::new()
     };
+    
+    // Update gif for glados
+    // Can't run thread_rng() with this, so I had to split it. Will work on combining this later.
+    if glados_trigger {
+        let gif_url = sqlx::query!("SELECT glados_gif FROM bot_settings")
+            .fetch_one(&ctx.data().database)
+            .await
+            .unwrap()
+            .glados_gif;
+            
+        random_gif = Some(gif_url);
+    }
     
     // Build and send embed
     let mut embed = serenity::CreateEmbed::new();
