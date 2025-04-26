@@ -290,7 +290,7 @@ async fn main() {
                 customgifs::setgifrole(),
                 settings::settings(),
                 boost::boost(),
-                bot_management::set_glados_gif(),
+                bot_management::set_bot_gif(),
 
                 minigames::bomb::bomb(),
                 minigames::rockpaperscisso::rps(),

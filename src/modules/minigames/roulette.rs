@@ -35,7 +35,11 @@ pub async fn roulette(ctx: Context<'_>) -> Result<(), Error> {
     roulette.roulette_count += 1;
     
     if roulette.roulette_count == roulette.roulette_chamber {
-        let gif_url = "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdGxqdWJwdTk5dGV6a2c4eTc3ZWhxdmc3MnZtcW5qMGRobHE5Yms1OCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3ohuPh9eyi4Av2DlM4/giphy.gif";
+        let gif_url = sqlx::query!("SELECT roulette_fire_gif FROM bot_settings")
+            .fetch_one(&ctx.data().database)
+            .await
+            .unwrap()
+            .roulette_fire_gif;
         let msg = String::from("You pick it up and...BANG!");
         
         let embed = serenity::CreateEmbed::new()
@@ -53,7 +57,11 @@ pub async fn roulette(ctx: Context<'_>) -> Result<(), Error> {
             .execute(&ctx.data().database)
             .await?;
     } else {
-        let gif_url = "https://c.tenor.com/Zv53CH35UVAAAAAd/tenor.gif";
+        let gif_url = sqlx::query!("SELECT roulette_click_gif FROM bot_settings")
+            .fetch_one(&ctx.data().database)
+            .await
+            .unwrap()
+            .roulette_click_gif;
         let msg = format!("{}, you hear a click and nothing happens! You have survived the attempt.", ctx.author());
         
         let embed = serenity::CreateEmbed::new()
