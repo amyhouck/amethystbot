@@ -185,7 +185,7 @@ async fn misc_container(
         GIFType::SlapSelf => String::from("Stop hitting yourself! Stop hitting yourself!"),
         GIFType::Cake => {
             let mut rng = thread_rng();
-            let glados = rng.gen_range(1..=13);
+            let glados = rng.gen_range(1..=20);
             
             if glados == 9 {
                 glados_trigger = true;
