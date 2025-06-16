@@ -1,7 +1,8 @@
-use crate::{log, Context};
+use crate::Context;
 use poise::serenity_prelude as serenity;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT};
 use std::time::Duration;
+use tracing::{info, error};
 
 //--------------------------
 // Handler for the bot data
@@ -62,8 +63,8 @@ pub async fn user_table_add(database: &sqlx::MySqlPool, guild_id: u64, user_id: 
         .await;
 
     match users_table_query_attempt {
-        Ok(_) => log::write_log(log::LogType::UserDBRegister { guild_id, user_id }),
-        Err(e) => log::write_log(log::LogType::DBError { db_error: e.to_string() })
+        Ok(_) => info!("[ USER ] New user added to stats table - Guild ID: {guild_id} - User ID: {user_id}"),
+        Err(e) => error!("[ USER ] An error occurred adding user to stats table: {e}")
     }
     
     let user_settings_query = sqlx::query!("INSERT INTO user_settings (guild_id, user_id) VALUES (?, ?)", guild_id, user_id)
@@ -71,8 +72,8 @@ pub async fn user_table_add(database: &sqlx::MySqlPool, guild_id: u64, user_id: 
         .await;
         
     match user_settings_query {
-        Ok(_) => log::write_log(log::LogType::UserDBRegister { guild_id, user_id }),
-        Err(e) => log::write_log(log::LogType::DBError { db_error: e.to_string() })
+        Ok(_) => info!("[ USER ] New user added to user_settings table - Guild ID: {guild_id} - User ID: {user_id}"),
+        Err(e) => error!("[ USER ] An error occurred adding user to user_settings table: {e}")
     }
 }
 
@@ -91,7 +92,7 @@ pub async fn alter_db_display_name(
             .unwrap();
     
     if query.rows_affected() == 1 {
-        log::write_log(log::LogType::UserDBNameChange { guild_id, user_id });
+        info!("[ USER ] Changed user display name in user stats table - Guild ID: {guild_id} - User ID: {user_id}");
     }
 }
 

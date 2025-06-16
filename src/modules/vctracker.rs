@@ -1,5 +1,6 @@
-use crate::{log, Context, Error};
+use crate::{Context, Error};
 use poise::serenity_prelude as serenity;
+use tracing::{info, warn};
 
 /// Settings for the VC time tracker
 #[poise::command(
@@ -160,7 +161,7 @@ pub async fn recheck_time(
             .vctrack_join_time;
 
         if join_time == 0 {
-            log::write_log(log::LogType::VCTrackerSafeguardSkip { guild_id, user_id });
+            warn!("[ VCTRACKER ] SAFEGUARD - Skipping user's time update. Guild ID: {guild_id} - User ID: {user_id}");
         } else {
             // Update users time
             let query = format!("
@@ -189,7 +190,7 @@ pub async fn vctracker_reset_monthly(database: &sqlx::MySqlPool) {
             .await
             .unwrap();
 
-        log::write_log(log::LogType::VCTrackerResetMonthlyComplete);
+        info!("[ VCTRACKER ] Reset monthly VC times for every user.");
     }
 }
 

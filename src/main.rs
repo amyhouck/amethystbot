@@ -9,6 +9,7 @@ use chrono::Utc;
 use cron::Schedule;
 use std::{str::FromStr, sync::Arc};
 use modules::*;
+use tracing::{warn, info};
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -16,7 +17,7 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framework: poise::FrameworkContext<'_, Data, Error>, data: &Data) -> Result<(), Error> {
     match event {
         serenity::FullEvent::Ready { .. } => {
-            log::write_log(log::LogType::BotStartup);
+            info!("[ BOT ] AmethystBot is online!");
             let ctx = Arc::new(ctx.clone());
             let data = Arc::new(data.clone());
 
@@ -34,7 +35,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                     let schedule: Vec<_> = schedule.upcoming(Utc).take(1).collect();
                     let duration = schedule[0].signed_duration_since(current_time);
                     
-                    log::write_log(log::LogType::BirthdayTimerReset { duration: duration.to_string() });
+                    info!("[ BIRTHDAY ] Duration until next birthday check: {}", duration);
 
                     tokio::time::sleep(duration.to_std().unwrap()).await;
                 }
@@ -53,7 +54,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                     let schedule: Vec<_> = schedule.upcoming(Utc).take(1).collect();
                     let duration = schedule[0].signed_duration_since(current_time);
 
-                    log::write_log(log::LogType::VCTrackerResetMonthlyDuration { duration: duration.to_string() });
+                    info!("[ VCTRACKER [ Duration until next monthly reset: {}", duration);
 
                     tokio::time::sleep(duration.to_std().unwrap()).await;
                 }
@@ -76,11 +77,11 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                     .await
                     .unwrap();
 
-                log::write_log(log::LogType::BotGuildDBRegister { guild_id, table_name: String::from("welcome") });
-                log::write_log(log::LogType::BotGuildDBRegister { guild_id, table_name: String::from("guild_settings") });
+                info!("[ BOT ] Registering new guild into \"welcome\" table - ID: {}", guild_id);
+                info!("[ BOT ] Registering new guild into \"guild_settings\" table - ID: {}", guild_id);
             }
 
-            log::write_log(log::LogType::BotGuildLogin { guild_id });
+            info!("[ BOT ] Logged into guild - ID: {}", guild_id);
 
             // VC tracking safeguard for disconnect users
             let guild_voice_states = guild.voice_states.clone();
@@ -98,7 +99,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                             .await
                             .unwrap();
 
-                        log::write_log(log::LogType::VCTrackerSafeguardAdjustment { guild_id, user_id: user.user_id });
+                        warn!("[ VCTRACKER ] SAFEGUARD - Adjusted time for User ID ({})- Guild ID: {}", user.user_id, guild_id);
                     }
                 }
             }
@@ -106,7 +107,6 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
 
         serenity::FullEvent::GuildMemberAddition { new_member } => {
             let guild_id = new_member.guild_id.get();
-            log::write_log(log::LogType::WelcomeNewUser { guild_id });
 
             // Grab all info and check for channel
             let welcome = sqlx::query!("SELECT * FROM welcome WHERE guild_id = ?", guild_id)
@@ -127,6 +127,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             let channel = serenity::ChannelId::new(welcome.channel_id.unwrap());
 
             channel.send_message(&ctx, serenity::CreateMessage::new().embed(welcome_embed)).await.unwrap();
+            info!("[ WELCOME ] New welcome message posted - Guild ID: {guild_id}");
 
             user_table_add(&data.database, guild_id, new_member.user.id.get(), new_member.display_name().to_string()).await;
         },
@@ -148,7 +149,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                 .await
                 .unwrap();
 
-            log::write_log(log::LogType::UserDBRemove);
+            info!("[ USER ] A user has left a server and associated data has been removed.");
 
             // Send leave message if channel is set in server settings
             let leave_channel_id = sqlx::query!("SELECT member_leave_channel_id FROM guild_settings WHERE guild_id = ?", guild_id)
@@ -251,6 +252,10 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
 //--------------------------
 #[tokio::main]
 async fn main() {
+    let subscriber = tracing_subscriber::FmtSubscriber::builder()
+        .with_target(false)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("Failed to set default subscriber");
     dotenv().ok();
 
     // Build bot
@@ -298,7 +303,16 @@ async fn main() {
             ],
             pre_command: |ctx| {
                 Box::pin(async move {
-                    log::write_log(log::LogType::CommandExecution { ctx });
+                    if let Some(guild_id) = ctx.guild_id() {
+                        info!("[ COMMAND ] Command execution - Guild ID: {} - User ID: {} - Command: {}",
+                            guild_id.get(),
+                            ctx.author().id.get(),
+                            ctx.command().name);
+                    } else {
+                        info!("[ COMMAND ] Command execution - User DM - User ID: {} - Command: {}",
+                            ctx.author().id.get(),
+                            ctx.command().name);
+                    }
 
                     user_table_check(ctx, ctx.author()).await;
                 })
@@ -317,7 +331,7 @@ async fn main() {
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
 
-        log::write_log(log::LogType::BotShutdown);
+        info!("[ BOT ] AmethystBot is shutting down!");
         shard_manager.shutdown_all().await;
     });
     

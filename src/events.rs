@@ -2,7 +2,8 @@
 
 use poise::serenity_prelude as serenity;
 use serenity::VoiceState;
-use crate::{log, Data, Error};
+use crate::{Data, Error};
+use tracing::warn;
 
 // "Custom" Event Calls
 
@@ -53,7 +54,7 @@ pub async fn on_user_vc_disconnect(data: &Data, old: &Option<VoiceState>, new: &
         .unwrap();
 
     if join_time.vctrack_join_time == 0 && old.as_ref().unwrap().channel_id.unwrap().get() != ignored_channel_id {
-        log::write_log(log::LogType::VCTrackerSafeguardSkip { guild_id, user_id });
+        warn!("[ VCTRACKER ] SAFEGUARD - Skipping user's time update. Guild ID: {guild_id} - User ID: {user_id}");
         return Ok(());
     }
 
@@ -101,7 +102,7 @@ pub async fn on_user_vc_move(data: &Data, old: &Option<VoiceState>, new: &VoiceS
             .unwrap();
 
         if join_time.vctrack_join_time == 0 {
-            log::write_log(log::LogType::VCTrackerSafeguardSkip { guild_id, user_id });
+        warn!("[ VCTRACKER ] SAFEGUARD - Skipping user's time update. Guild ID: {guild_id} - User ID: {user_id}");
             return Ok(());
         }
 
