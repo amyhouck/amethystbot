@@ -8,11 +8,14 @@ use dotenv::dotenv;
 use chrono::Utc;
 use cron::Schedule;
 use std::{str::FromStr, sync::Arc};
+use std::sync::Once;
 use modules::*;
 use tracing::{warn, info};
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
+static BIRTHDAY: Once = Once::new();
+static VCMONTHLY: Once = Once::new();
 
 async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framework: poise::FrameworkContext<'_, Data, Error>, data: &Data) -> Result<(), Error> {
     match event {
@@ -21,43 +24,47 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
             let ctx = Arc::new(ctx.clone());
             let data = Arc::new(data.clone());
 
-            // Birthday loop
-            let new_ctx = Arc::clone(&ctx);
-            let new_data = Arc::clone(&data);
-            tokio::spawn(async move {
-                loop {
-                    birthday::birthday_check(&new_ctx, &new_data).await;
+            BIRTHDAY.call_once(|| {
+                // Birthday loop
+                let new_ctx = Arc::clone(&ctx);
+                let new_data = Arc::clone(&data);
+                tokio::spawn(async move {
+                    loop {
+                        birthday::birthday_check(&new_ctx, &new_data).await;
 
-                    // Calculate sleep until the next proper birthday time
-                    let current_time = chrono::Utc::now();
-                    let expression = "0 0 10 * * * *";
-                    let schedule = Schedule::from_str(expression).unwrap();
-                    let schedule: Vec<_> = schedule.upcoming(Utc).take(1).collect();
-                    let duration = schedule[0].signed_duration_since(current_time);
-                    
-                    info!("[ BIRTHDAY ] Duration until next birthday check: {}", duration);
+                        // Calculate sleep until the next proper birthday time
+                        let current_time = chrono::Utc::now();
+                        let expression = "0 0 10 * * * *";
+                        let schedule = Schedule::from_str(expression).unwrap();
+                        let schedule: Vec<_> = schedule.upcoming(Utc).take(1).collect();
+                        let duration = schedule[0].signed_duration_since(current_time);
+                        
+                        info!("[ BIRTHDAY ] Duration until next birthday check: {}", duration);
 
-                    tokio::time::sleep(duration.to_std().unwrap()).await;
-                }
+                        tokio::time::sleep(duration.to_std().unwrap()).await;
+                    }
+                });
             });
 
-            // VCTracker Monthly Reset
-            let new_data = Arc::clone(&data);
-            tokio::spawn(async move {
-                loop {
-                    vctracker::vctracker_reset_monthly(&new_data.database).await;
+            VCMONTHLY.call_once(|| {
+                // VCTracker Monthly Reset
+                let new_data = Arc::clone(&data);
+                tokio::spawn(async move {
+                    loop {
+                        vctracker::vctracker_reset_monthly(&new_data.database).await;
 
-                    // Calculate sleep to 1st of next month
-                    let current_time = chrono::Utc::now();
-                    let expression = "0 0 0 1 * * *";
-                    let schedule = Schedule::from_str(expression).unwrap();
-                    let schedule: Vec<_> = schedule.upcoming(Utc).take(1).collect();
-                    let duration = schedule[0].signed_duration_since(current_time);
+                        // Calculate sleep to 1st of next month
+                        let current_time = chrono::Utc::now();
+                        let expression = "0 0 0 1 * * *";
+                        let schedule = Schedule::from_str(expression).unwrap();
+                        let schedule: Vec<_> = schedule.upcoming(Utc).take(1).collect();
+                        let duration = schedule[0].signed_duration_since(current_time);
 
-                    info!("[ VCTRACKER [ Duration until next monthly reset: {}", duration);
+                        info!("[ VCTRACKER ] Duration until next monthly reset: {}", duration);
 
-                    tokio::time::sleep(duration.to_std().unwrap()).await;
-                }
+                        tokio::time::sleep(duration.to_std().unwrap()).await;
+                    }
+                });
             });
         },
 
