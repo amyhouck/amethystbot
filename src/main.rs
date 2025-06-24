@@ -39,7 +39,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                         let schedule: Vec<_> = schedule.upcoming(Utc).take(1).collect();
                         let duration = schedule[0].signed_duration_since(current_time);
                         
-                        info!("[ BIRTHDAY ] Duration until next birthday check: {}", duration);
+                        info!("[ BIRTHDAY ] Seconds until next birthday check: {}", duration.num_seconds());
 
                         tokio::time::sleep(duration.to_std().unwrap()).await;
                     }
@@ -60,7 +60,7 @@ async fn listener(ctx: &serenity::Context, event: &serenity::FullEvent, _framewo
                         let schedule: Vec<_> = schedule.upcoming(Utc).take(1).collect();
                         let duration = schedule[0].signed_duration_since(current_time);
 
-                        info!("[ VCTRACKER ] Duration until next monthly reset: {}", duration);
+                        info!("[ VCTRACKER ] Seconds until next monthly reset: {}", duration.num_seconds());
 
                         tokio::time::sleep(duration.to_std().unwrap()).await;
                     }
